@@ -1,0 +1,6 @@
+{
+  "name": "Timeline dos Movimentos Artísticos",
+  "description": "Navegador de linha do tempo interativa e atlas cultural de movimentos artísticos, contextos históricos e comparações regionais.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
