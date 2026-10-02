@@ -1,45 +1,43 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ViewMode, Movement, ThemeMode } from '../types';
-import { Search, ChevronDown, Moon, Sun, Clock, X } from 'lucide-react';
+import { Search, Moon, Sun, X } from 'lucide-react';
 
 interface NavbarProps {
-  currentView: ViewMode;
-  onViewChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   movements: Movement[];
   onSelectMovement: (m: Movement) => void;
   theme: ThemeMode;
   onToggleTheme: () => void;
+  currentView?: ViewMode;
+  onViewChange?: (mode: ViewMode) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  currentView,
-  onViewChange,
   searchQuery,
   onSearchChange,
   movements,
   onSelectMovement,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  onViewChange
 }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown on outside click
+  // Close search autocomplete on outside click or touch
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
-      }
+    const handleOutside = (e: MouseEvent | TouchEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setIsSearchFocused(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+    };
   }, []);
 
   // Filtered movements for search autocomplete
@@ -58,16 +56,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const isDark = theme === 'dark';
 
-  // Inverted mapping as requested:
-  // "Linha do Tempo" corresponds to interactive horizontal ruler/timeline (internal 'canvas')
-  // "Canvas 2D" corresponds to the 2D chronological view (internal 'linear')
-  const currentViewLabel = currentView === 'canvas' ? 'Linha do Tempo' : 'Canvas 2D';
-
-  const handleSelectView = (view: ViewMode) => {
-    onViewChange(view);
-    setIsDropdownOpen(false);
-  };
-
   const handleSelectResult = (m: Movement) => {
     onSelectMovement(m);
     onSearchChange('');
@@ -76,46 +64,85 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header 
-      className={`sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-200 select-none ${
+      className={`sticky top-0 z-[60] backdrop-blur-md border-b transition-colors duration-200 select-none ${
         isDark 
           ? 'bg-[#18181b]/95 border-neutral-800 text-neutral-100 shadow-sm' 
           : 'bg-[#faf8f5]/95 border-[#e5e0d8] text-neutral-900 shadow-sm'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
+      <div className="w-full px-2.5 sm:px-6 py-1 flex items-center justify-between gap-2 sm:gap-3 h-12">
         
-        {/* Left: App Icon & Name */}
+        {/* Left: App Logo & Name (Cronos art) - Icon only on mobile vertical, name on sm+ */}
         <div 
-          className="flex items-center space-x-2.5 cursor-pointer shrink-0"
-          onClick={() => onViewChange('canvas')}
+          className="flex items-center space-x-2 cursor-pointer shrink-0 group select-none"
+          onClick={() => onViewChange?.('canvas')}
+          title="Cronos art • Linha do Tempo"
         >
-          <div 
-            className={`w-7 h-7 rounded-md flex items-center justify-center border transition-colors ${
-              isDark 
-                ? 'bg-neutral-800/90 border-neutral-700 text-neutral-100' 
-                : 'bg-neutral-200/80 border-neutral-300 text-neutral-900'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5" />
+          {/* Logo: Vector Number Eight with Fibonacci Golden Spiral, pure black in light mode and pure white in dark mode */}
+          <div className={`w-6 h-6 flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shrink-0 ${
+            isDark ? 'text-white' : 'text-black'
+          }`}>
+            <svg
+              className="w-full h-full"
+              viewBox="0 0 32 32"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-label="Cronos art logo"
+            >
+              {/* Upper Loop of the 8 */}
+              <path
+                d="M 16 14.5
+                   C 12.8 14.5, 10 12.2, 10 9.2
+                   C 10 6.2, 12.8 3.8, 16 3.8
+                   C 19.2 3.8, 22 6.2, 22 9.2
+                   C 22 12.2, 19.2 14.5, 16 14.5 Z"
+                stroke={isDark ? '#FFFFFF' : '#000000'}
+                strokeWidth="2.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              {/* Lower Fibonacci Golden Spiral Loop */}
+              <path
+                d="M 16 14.5
+                   C 20.8 14.5, 24.8 18, 24.8 22.5
+                   C 24.8 27, 20.8 29.8, 16 29.8
+                   C 11 29.8, 7.2 26.6, 7.2 22
+                   C 7.2 17.6, 10.8 15.5, 15.5 15.5
+                   C 19.2 15.5, 22 17.8, 22 21.2
+                   C 22 24, 19.8 25.8, 16.8 25.8
+                   C 14.2 25.8, 12.5 24.2, 12.5 22.2
+                   C 12.5 20.6, 13.9 19.5, 15.6 19.5
+                   C 17 19.5, 18 20.4, 18 21.5"
+                stroke={isDark ? '#FFFFFF' : '#000000'}
+                strokeWidth="2.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </div>
-          <span className="font-semibold text-base tracking-tight text-current">
-            Timeline
+
+          {/* Unified Brand Typography - Hidden on small mobile vertical to let search bar expand */}
+          <span className={`hidden sm:inline font-bold text-[15px] tracking-tight ${
+            isDark ? 'text-white' : 'text-black'
+          }`}>
+            Cronos art
           </span>
         </div>
 
-        {/* Center: Search Input Bar with Autocomplete Popover */}
-        <div ref={searchContainerRef} className="relative flex-1 max-w-md mx-2">
+        {/* Center / Main: Search Input Bar - Fills the vast majority of the top bar on mobile vertical */}
+        <div ref={searchContainerRef} className="relative flex-1 min-w-0 mx-1 sm:mx-3 sm:max-w-md">
           <div 
-            className={`flex items-center w-full rounded-lg border px-3 py-1.5 transition-all text-xs ${
+            className={`flex items-center h-8 w-full rounded-lg border px-2.5 transition-all text-xs ${
               isDark 
                 ? 'bg-[#222226] border-neutral-700/80 text-neutral-100 focus-within:border-neutral-500' 
                 : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-900 focus-within:border-neutral-500 shadow-xs'
             }`}
+            title="Barra de busca • Procure por movimentos artísticos, épocas, artistas ou regiões"
           >
-            <Search className={`w-3.5 h-3.5 mr-2 shrink-0 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`} />
+            <Search className={`w-3.5 h-3.5 mr-1.5 shrink-0 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`} />
             <input
               type="text"
-              placeholder="Buscar movimento, artista, período..."
+              placeholder="Buscar movimento, artista..."
               value={searchQuery}
               onChange={(e) => {
                 onSearchChange(e.target.value);
@@ -133,8 +160,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
             {searchQuery && (
               <button 
+                type="button"
                 onClick={() => onSearchChange('')}
-                className="p-0.5 rounded hover:opacity-75 transition-opacity"
+                className="p-0.5 rounded hover:opacity-75 transition-opacity cursor-pointer shrink-0"
+                title="Limpar pesquisa"
               >
                 <X className="w-3 h-3 text-neutral-400" />
               </button>
@@ -144,19 +173,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Search Autocomplete Results Dropdown */}
           {isSearchFocused && searchResults.length > 0 && (
             <div 
-              className={`absolute top-full left-0 right-0 mt-1.5 rounded-xl border shadow-xl overflow-hidden z-50 py-1 max-h-72 overflow-y-auto ${
+              className={`absolute top-full left-0 right-0 mt-1.5 rounded-xl border shadow-2xl overflow-hidden z-[70] py-1 max-h-60 overflow-y-auto ${
                 isDark 
-                  ? 'bg-[#202024] border-neutral-700/90 text-neutral-100' 
-                  : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-900'
+                  ? 'bg-[#202024] border-neutral-700 text-neutral-100 shadow-black/80' 
+                  : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-900 shadow-neutral-400/40'
               }`}
             >
               {searchResults.map((m) => (
                 <div
                   key={m.id}
                   onClick={() => handleSelectResult(m)}
-                  className={`px-3 py-2 flex items-center justify-between cursor-pointer transition-colors text-xs ${
+                  className={`px-3 py-1.5 flex items-center justify-between cursor-pointer transition-colors text-xs ${
                     isDark ? 'hover:bg-neutral-800/80' : 'hover:bg-neutral-100'
                   }`}
+                  title={`Ver detalhes do movimento ${m.name} (${m.displayPeriod})`}
                 >
                   <div className="flex flex-col">
                     <span className="font-semibold text-current">{m.name}</span>
@@ -165,7 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   </div>
                   <span 
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                    className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
                       isDark 
                         ? 'bg-neutral-800 border-neutral-700 text-neutral-300' 
                         : 'bg-neutral-100 border-neutral-200 text-neutral-700'
@@ -179,77 +209,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Right: View Dropdown & Monochromatic Theme Toggle */}
-        <div className="flex items-center space-x-2 shrink-0">
-          
-          {/* View Style Dropdown */}
-          <div ref={dropdownRef} className="relative">
-            <button
-              onClick={() => setIsDropdownOpen(prev => !prev)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                isDark 
-                  ? 'bg-[#222226] border-neutral-700/80 text-neutral-100 hover:border-neutral-500' 
-                  : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-900 hover:border-neutral-400 shadow-xs'
-              }`}
-            >
-              <span>{currentViewLabel}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isDropdownOpen && (
-              <div 
-                className={`absolute right-0 mt-1.5 w-40 rounded-xl border shadow-xl overflow-hidden z-50 py-1 ${
-                  isDark 
-                    ? 'bg-[#202024] border-neutral-700/90 text-neutral-100' 
-                    : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-900'
-                }`}
-              >
-                <button
-                  onClick={() => handleSelectView('canvas')}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                    currentView === 'canvas' 
-                      ? (isDark ? 'bg-neutral-800 font-semibold' : 'bg-neutral-100 font-semibold') 
-                      : (isDark ? 'hover:bg-neutral-800/60' : 'hover:bg-neutral-50')
-                  }`}
-                >
-                  <span>Linha do Tempo</span>
-                  {currentView === 'canvas' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleSelectView('linear')}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                    currentView === 'linear' 
-                      ? (isDark ? 'bg-neutral-800 font-semibold' : 'bg-neutral-100 font-semibold') 
-                      : (isDark ? 'hover:bg-neutral-800/60' : 'hover:bg-neutral-50')
-                  }`}
-                >
-                  <span>Canvas 2D</span>
-                  {currentView === 'linear' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Monochromatic Dark/Light Theme Toggle */}
-          <button
-            onClick={onToggleTheme}
-            className={`p-1.5 rounded-lg border transition-colors ${
-              isDark 
-                ? 'bg-[#222226] border-neutral-700/80 text-neutral-300 hover:text-white hover:border-neutral-500' 
-                : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-700 hover:text-black hover:border-neutral-400 shadow-xs'
-            }`}
-            title={isDark ? 'Mudar para modo claro (Branco creme)' : 'Mudar para modo escuro (Cinza escuro)'}
-            aria-label="Alternar tema"
-          >
-            {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-          </button>
-
-        </div>
+        {/* Right: Monochromatic Dark/Light Theme Toggle directly next to search bar */}
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          className={`w-8 h-8 rounded-lg border transition-colors flex items-center justify-center cursor-pointer shrink-0 ${
+            isDark 
+              ? 'bg-[#222226] border-neutral-700/80 text-neutral-300 hover:text-white hover:border-neutral-500' 
+              : 'bg-[#ffffff] border-[#e2ddd5] text-neutral-700 hover:text-black hover:border-neutral-400 shadow-xs'
+          }`}
+          title={isDark ? 'Mudar para modo claro (Branco creme)' : 'Mudar para modo escuro (Cinza escuro)'}
+          aria-label="Alternar tema"
+        >
+          {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+        </button>
 
       </div>
     </header>

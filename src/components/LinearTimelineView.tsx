@@ -107,10 +107,11 @@ export const LinearTimelineView: React.FC<LinearTimelineViewProps> = ({
                 {/* Movement Stream Card */}
                 <div 
                   onClick={() => onSelectMovement(m)}
-                  className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer shadow-xs hover:shadow-md space-y-2.5 ${
+                  title={`${m.name} (${m.displayPeriod}) • Período: ${eraObj?.name || ''} • Clique para abrir detalhes`}
+                  className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
                     isDark 
-                      ? 'bg-[#202024] border-neutral-800 hover:border-neutral-500' 
-                      : 'bg-white border-[#ded8cc] hover:border-neutral-500'
+                      ? 'bg-[#202024] border-neutral-800 hover:border-neutral-500 shadow-md shadow-black/80' 
+                      : 'bg-white border-[#ded8cc] hover:border-neutral-500 shadow-[0_4px_16px_rgba(0,0,0,0.22)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.32)]'
                   }`}
                 >
                   <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-2 ${isDark ? 'border-neutral-800' : 'border-[#f0ebe3]'}`}>
@@ -134,10 +135,10 @@ export const LinearTimelineView: React.FC<LinearTimelineViewProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <h3 className={`text-lg font-bold transition-colors ${isDark ? 'text-white group-hover:text-neutral-200' : 'text-neutral-900 group-hover:text-black'}`}>
+                    <h3 className={`text-base sm:text-lg font-bold transition-colors ${isDark ? 'text-white group-hover:text-neutral-200' : 'text-neutral-900 group-hover:text-black'}`}>
                       {m.name}
                     </h3>
-                    <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-neutral-400' : 'text-neutral-600'}`}>
+                    <p className={`text-sm leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
                       {m.summary}
                     </p>
                   </div>

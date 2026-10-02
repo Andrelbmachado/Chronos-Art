@@ -20,12 +20,12 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
-        id: 'biface-achelense',
-        title: 'Biface Achelense de Simetria Perfeita',
-        artist: 'Homo Erectus',
-        year: 'c. 500.000 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
-        description: 'Pedra de quartzo esculpida com simetria intencional além da mera necessidade funcional.'
+        id: 'bisao-lascaux',
+        title: 'O Bisão Vermelho Rupestre',
+        artist: 'Pintores das Cavernas',
+        year: 'c. 36.000 a.C.',
+        imageUrl: '/src/assets/images/lascaux_red_bison_1790228212922.jpg',
+        description: 'Pintura rupestre em ocre vermelho sobre rocha natural retratando a força e vitalidade do bisão ancestral.'
       }
     ],
     influences: [],
@@ -43,29 +43,29 @@ export const MOVEMENTS: Movement[] = [
     displayPeriod: 'c. 300.000 – 40.000 a.C.',
     originRegion: 'Europa, África e Oriente Médio',
     visualCharacteristics: [
-      'Gravuras geométricas simples em ocre',
-      'Uso ceremonial de pigmentos minerais (ocre vermelho)',
-      'Adornos corporais com conchas perfuradas'
+      'Gravuras geométricas simples em ocre mineral',
+      'Uso cerimonial de pigmentos vermelhos e adornos líticos',
+      'Indústria lítica musteriense associada aos Neandertais'
     ],
-    historicalContext: 'Cultura do Neandertal e Homo sapiens arcaico. Início de rituais funerários e pensamento abstrato simbólico.',
+    historicalContext: 'Cultura musteriense do Neandertal e Homo sapiens arcaico. Início de rituais funerários, pensamento abstrato simbólico e adornos corporais.',
     keyArtists: [
-      { name: 'Caçadores Neandertais e Sapiens', role: 'Gravadores e ornamentadores', country: 'Europa / África' }
+      { name: 'Caçadores Neandertais e Sapiens', role: 'Gravadores e artífices líticos', country: 'Europa / África' }
     ],
     famousWorks: [
       {
-        id: 'blombos-ocre',
-        title: 'Ocre Gravado da Caverna de Blombos',
-        artist: 'Homo Sapiens Arcaico',
+        id: 'blombos-ocre-gravado',
+        title: 'Bloco de Ocre Gravado de Blombos',
+        artist: 'Artífices do Paleolítico Médio',
         year: 'c. 75.000 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?q=80&w=800&auto=format&fit=crop',
-        description: 'Bloco de ocre gravado com hachuras geométricas cruzadas, considerado um dos primeiros registros gráficos abstratos.'
+        imageUrl: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?q=80&w=800&auto=format&fit=crop',
+        description: 'Placa de ocre mineral vermelho com incisões geométricas rítmicas em padrão de losangos, um dos mais antigos testemunhos de pensamento abstrato e simbólico humano.'
       }
     ],
     influences: ['paleolitico-inferior'],
     influenced: ['paleolitico-superior'],
     color: '#92400e',
     summary: 'Surgimento da pigmentação corporal, adornos e hachuras geométricas abstratas.',
-    tags: ['Ocre', 'Símbolos', 'Gravura']
+    tags: ['Ocre', 'Símbolos', 'Gravura', 'Musteriense']
   },
   {
     id: 'paleolitico-superior',
@@ -76,11 +76,11 @@ export const MOVEMENTS: Movement[] = [
     displayPeriod: 'c. 40.000 – 10.000 a.C.',
     originRegion: 'França, Espanha, África',
     visualCharacteristics: [
-      'Pinturas rupestres parietal vibrantes (animais em movimento)',
-      'Estatuetas estilizadas de estearatita e marfim (Vênus de fertilidade)',
+      'Pinturas rupestres parietais vibrantes (animais em movimento)',
+      'Estatuetas estilizadas de estearatita e calcário (Vênus de fertilidade)',
       'Contornos a carvão e pigmentos naturais aplicados por sopro ou pincel de cerda'
     ],
-    historicalContext: 'Comunidades nomadicas de caçadores-coletores Sapiens produzindo rituais mágicos de caça e celebração da fertilidade em cavernas profundas.',
+    historicalContext: 'Comunidades nômades de caçadores-coletores Sapiens produzindo rituais mágicos de caça e celebração da fertilidade em cavernas profundas.',
     keyArtists: [
       { name: 'Mestres de Lascaux e Altamira', role: 'Pintores das cavernas', country: 'França / Espanha' }
     ],
@@ -90,7 +90,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Vênus de Willendorf',
         artist: 'Escultor Paleolítico',
         year: 'c. 28.000 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1569317002804-ab77bcf1bce4?q=80&w=800&auto=format&fit=crop',
+        imageUrl: '/src/assets/images/venus_of_willendorf_1790228224315.jpg',
         description: 'Escultura em calcário ocre representando atributos femininos acentuados como símbolo de fertilidade e abundância.'
       },
       {
@@ -164,8 +164,8 @@ export const MOVEMENTS: Movement[] = [
         title: 'Carro do Sol de Trundholm',
         artist: 'Artesãos do Bronze Nórdico',
         year: 'c. 1.400 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
-        description: 'Disco de bronze folheado a ouro puxado por um cavalo sobre rodas, representando a jornada solar.'
+        imageUrl: '/src/assets/images/bronze_age_relic_1790228234285.jpg',
+        description: 'Disco de bronze folheado a ouro puxado por um corcel sobre rodas, representando a jornada celestial do Sol.'
       }
     ],
     influences: ['neolitico'],
@@ -194,12 +194,12 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
-        id: 'porta-ishtar',
-        title: 'A Porta de Ishtar',
-        artist: 'Arquitetos de Nabucodonosor II',
-        year: 'c. 575 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
-        description: 'Monumental portal vidrado em azul cobalto decorado com dragões mušḫuššu e touros celestiais.'
+        id: 'zigurate-cidade-mesopotamia',
+        title: 'O Grande Zigurate e Cidade da Babilônia',
+        artist: 'Arquitetos Reais da Mesopotâmia',
+        year: 'c. 2100 a.C.',
+        imageUrl: '/src/assets/images/mesopotamia_ziggurat_city_1790228271799.jpg',
+        description: 'Monumental templo escalonado em tijolos cozidos elevando o santuário sagrado em direção aos céus mesopotâmicos.'
       },
       {
         id: 'estela-hamurabi',
@@ -237,20 +237,20 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
+        id: 'piramides-gize',
+        title: 'As Grandes Pirâmides de Gizé e a Esfinge',
+        artist: 'Imhotep & Mestres Construtores dos Faraós',
+        year: 'c. 2560 a.C.',
+        imageUrl: '/src/assets/images/egypt_giza_pyramids_1790228283102.jpg',
+        description: 'Monumentos eternos de calcário e granito erguidos nas areias do deserto como morada sagrada para a eternidade dos faraós.'
+      },
+      {
         id: 'mascara-tutancamon',
         title: 'Máscara Funerária de Tutancâmon',
         artist: 'Ourives Reais de Tebas',
         year: 'c. 1323 a.C.',
         imageUrl: 'https://images.unsplash.com/photo-1503152394-c571994fd383?q=80&w=800&auto=format&fit=crop',
         description: 'Ícone supremo da arte egípcia em ouro maciço com incrustações de lápis-lazúli, quartzo e faiança.'
-      },
-      {
-        id: 'busto-nefertiti',
-        title: 'Busto da Rainha Nefertiti',
-        artist: 'Tutmés',
-        year: 'c. 1345 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
-        description: 'Escultura de calcário estucado exibindo graça, simetria e realismo da revolucionária era de Amarna.'
       }
     ],
     influences: ['idade-dos-metais'],
@@ -281,20 +281,20 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
+        id: 'escultura-marmore-grega',
+        title: 'Escultura Clássica em Mármore Branco',
+        artist: 'Praxíteles e Mestres Escultores',
+        year: 'c. 450 a.C.',
+        imageUrl: '/src/assets/images/greek_marble_statue_1790228295511.jpg',
+        description: 'Escultura esculpida em mármore branco impecável, ápice do cânone clássico, proporção e elegância do contrapposto.'
+      },
+      {
         id: 'parthenon-grecia',
         title: 'O Parthenon na Acrópole de Atenas',
         artist: 'Ictinos e Calícrates (Supervisão de Fídias)',
         year: '447 a.C.',
         imageUrl: 'https://images.unsplash.com/photo-1555993539-1732b0258235?q=80&w=800&auto=format&fit=crop',
         description: 'Templo dórico perfeito dedicado à deusa Atena com sutis correções ópticas de perspectiva.'
-      },
-      {
-        id: 'vitoria-samotracia',
-        title: 'Vitória de Samotrácia',
-        artist: 'Escultor Helenístico de Rodes',
-        year: 'c. 190 a.C.',
-        imageUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
-        description: 'Estátua em mármore da deusa Nice com vestes esvoaçantes simulando o vento marinho na proa de um navio.'
       }
     ],
     influences: ['arte-egipcia'],
@@ -410,12 +410,12 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
-        id: 'timpano-autun',
-        title: 'Tímpano do Juízo Final na Catedral de Saint-Lazare',
-        artist: 'Gislebertus',
-        year: 'c. 1130',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
-        description: 'Escultura dramática em relevo no portal mostrando Cristo majestoso julgando as almas e pesando os pecados.'
+        id: 'cristo-pantocrator-taull',
+        title: 'Cristo Pantocrator em Majestade',
+        artist: 'Mestre de Taüll',
+        year: 'c. 1123',
+        imageUrl: '/src/assets/images/romanic_art_fresco_1790228250752.jpg',
+        description: 'Monumental afresco na abside de igreja românica retratando Cristo entronizado em mandorla com cores minerais intensas.'
       },
       {
         id: 'santiago-romanico',
@@ -429,8 +429,8 @@ export const MOVEMENTS: Movement[] = [
     influences: ['arte-romana', 'arte-bizantina'],
     influenced: ['arte-gotica'],
     color: '#57534e',
-    summary: 'Igrejas-fortalezas de pedra com arcos plenos e portais esculpidos do Juízo Final acolhendo multidões de peregrinos.',
-    tags: ['Românico', 'Peregrinação', 'Juízo Final', 'Autun', 'Santiago de Compostela']
+    summary: 'Igrejas-fortalezas de pedra com arcos plenos e afrescos sacros vigorosos acolhendo multidões de peregrinos.',
+    tags: ['Românico', 'Peregrinação', 'Pantocrator', 'Taüll', 'Santiago de Compostela']
   },
   {
     id: 'arte-gotica',
@@ -454,6 +454,14 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
+        id: 'catedral-gotica-koln',
+        title: 'Catedral Gótica Monumental de Pedra Escura',
+        artist: 'Mestres Pedreiros Góticos',
+        year: '1248–1473',
+        imageUrl: '/src/assets/images/gothic_black_cathedral_1790228306617.jpg',
+        description: 'Imensa catedral gótica de pedra escura com agulhas altíssimas alcançando os céus, arcobotantes esbeltos e rosácea central.'
+      },
+      {
         id: 'notre-dame-paris',
         title: 'Catedral de Notre-Dame de Paris',
         artist: 'Mestres Construtores Góticos',
@@ -468,21 +476,13 @@ export const MOVEMENTS: Movement[] = [
         year: '1305',
         imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
         description: 'Afresco revolucionário que inaugurou o drama humano realista e o espaço pré-renascentista.'
-      },
-      {
-        id: 'sainte-chapelle',
-        title: 'Vitrais da Sainte-Chapelle',
-        artist: 'Mestres Vidreiros de Luís IX',
-        year: '1248',
-        imageUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?q=80&w=800&auto=format&fit=crop',
-        description: 'Paredes translúcidas de vitrais em arco ogival criando um relicário resplandecente de luz mística policromada.'
       }
     ],
     influences: ['arte-romanica', 'arte-bizantina'],
     influenced: ['renascimento'],
     color: '#475569',
-    summary: 'A ascensão vertical em direção aos céus, vitrais luminosos de catedrais e a humanização emocional pioneira de Giotto.',
-    tags: ['Gótico', 'Notre-Dame', 'Vitrais', 'Giotto', 'Arcobotantes']
+    summary: 'A ascensão vertical em direção aos céus, catedrais góticas escuras com agulhas altíssimas e vitrais translúcidos.',
+    tags: ['Gótico', 'Catedral', 'Vitrais', 'Giotto', 'Arcobotantes']
   },
   {
     id: 'renascimento',
@@ -510,8 +510,8 @@ export const MOVEMENTS: Movement[] = [
         title: 'Mona Lisa (La Gioconda)',
         artist: 'Leonardo da Vinci',
         year: '1503–1519',
-        imageUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
-        description: 'Retrato emblemático mundialmente famoso por seu olhar enigmático e uso magistral do sfumato.'
+        imageUrl: '/src/assets/images/mona_lisa_renaissance_1790228201668.jpg',
+        description: 'Retrato emblemático mundialmente famoso por seu olhar enigmático, harmonia de composição e uso magistral do sfumato.'
       },
       {
         id: 'davida-michelangelo',
@@ -553,7 +553,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'O Enterro do Conde de Orgaz',
         artist: 'El Greco',
         year: '1586',
-        imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?q=80&w=800&auto=format&fit=crop',
         description: 'Fusão magistral entre a terra realista e o céu estilizado com corpos elásticos e luz mística.'
       }
     ],
@@ -598,7 +598,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'O Éxtase de Santa Teresa',
         artist: 'Gian Lorenzo Bernini',
         year: '1647–1652',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1579783901586-d88db74b4fe4?q=80&w=800&auto=format&fit=crop',
         description: 'Escultura barroca em mármore capturando o momento de fervor místico e teatralidade sublime.'
       },
       {
@@ -641,7 +641,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'O Balanço',
         artist: 'Jean-Honoré Fragonard',
         year: '1767',
-        imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800&auto=format&fit=crop',
         description: 'Símbolo estético do Rococó retratando uma jovem em um balanço em jardim luxulento com sapatilha arremessada no ar.'
       }
     ],
@@ -676,7 +676,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'O Juramento dos Horácios',
         artist: 'Jacques-Louis David',
         year: '1784',
-        imageUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop',
         description: 'Manifesto pictórico do Neoclassicismo exaltando dever, honra e austeridade moral romanas.'
       }
     ],
@@ -756,7 +756,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Um Enterro em Ornans',
         artist: 'Gustave Courbet',
         year: '1849–1850',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1577720580479-7d839d829c73?q=80&w=800&auto=format&fit=crop',
         description: 'Tela monumental retratando um funeral provincial comum com o respeito anteriormente reservado aos reis.'
       }
     ],
@@ -836,7 +836,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'A Noite Estrelada',
         artist: 'Vincent van Gogh',
         year: '1889',
-        imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1579783902403-9e45c754d5b2?q=80&w=800&auto=format&fit=crop',
         description: 'Visão cósmica e vibrante do céu noturno pintada no asilo de Saint-Rémy-de-Provence.'
       },
       {
@@ -957,7 +957,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'A Dança (La Danse)',
         artist: 'Henri Matisse',
         year: '1910',
-        imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1579783928621-7a13d66a62d1?q=80&w=800&auto=format&fit=crop',
         description: 'Cinco figuras nuas dançando em roda sob um céu azul cobalto e colina verde esmeralda com dinamismo rítmico puro.'
       },
       {
@@ -1001,7 +1001,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'O Grito',
         artist: 'Edvard Munch',
         year: '1893',
-        imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1577083288073-40892c0860a4?q=80&w=800&auto=format&fit=crop',
         description: 'O supremo símbolo moderno da ansiedade existencial com o céu sangrento e a figura semipresencial.'
       }
     ],
@@ -1036,7 +1036,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Les Demoiselles d\'Avignon',
         artist: 'Pablo Picasso',
         year: '1907',
-        imageUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1569317002804-ab77bcf1bce4?q=80&w=800&auto=format&fit=crop',
         description: 'A tela que abalou a história da arte ao destruir a perspectiva ilusionista com figuras angulares e máscaras afrotribais.'
       },
       {
@@ -1079,7 +1079,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Formas Únicas de Continuidade no Espaço',
         artist: 'Umberto Boccioni',
         year: '1913',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=800&auto=format&fit=crop',
         description: 'Escultura em bronze capturando uma figura humana marchando em dinamismo fluído com o vento e a velocidade.'
       }
     ],
@@ -1364,7 +1364,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Number 1A / Convergence',
         artist: 'Jackson Pollock',
         year: '1948',
-        imageUrl: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1579541814924-49fef17c5be5?q=80&w=800&auto=format&fit=crop',
         description: 'Trama rítmica estonteante de esmaltes industriais aplicados no chão com dança gestual por todo o espaço da tela.'
       },
       {
@@ -1404,20 +1404,20 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
+        id: 'popart-mulher-loira',
+        title: 'Garota Pop Art com Cabelo Amarelo',
+        artist: 'Roy Lichtenstein & Estilo Pop',
+        year: '1964',
+        imageUrl: '/src/assets/images/pop_art_woman_1790228330060.jpg',
+        description: 'Pintura icônica do Pop Art retratando mulher com vibrante cabelo amarelo intenso, pontos Ben-Day e contornos marcantes.'
+      },
+      {
         id: 'campbells-soup-warhol',
         title: 'Latas de Sopa Campbell',
         artist: 'Andy Warhol',
         year: '1962',
         imageUrl: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?q=80&w=800&auto=format&fit=crop',
         description: '32 telas reproduzindo em série as latas de sopa industriais, elevando o objeto de supermercado ao museu.'
-      },
-      {
-        id: 'marilyn-diptych',
-        title: 'Díptico de Marilyn',
-        artist: 'Andy Warhol',
-        year: '1962',
-        imageUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
-        description: 'Serigrafia colorida em massa celebrando e problematizando o culto das celebridades tragicamente desaparecidas.'
       }
     ],
     influences: ['dadaismo', 'art-deco'],
@@ -1452,7 +1452,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Sem Título (Caixas de Alumínio)',
         artist: 'Donald Judd',
         year: '1969',
-        imageUrl: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1582201942988-13e60e4556ee?q=80&w=800&auto=format&fit=crop',
         description: 'Unidades tridimensionais idênticas dispostas em intervalos verticais matemáticos na parede do museu.'
       }
     ],
@@ -1489,7 +1489,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Bicho - Pássaro do Espaço',
         artist: 'Lygia Clark',
         year: '1960',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1558655146-d09347e92766?q=80&w=800&auto=format&fit=crop',
         description: 'Escultura geométrica em placas articuladas de alumínio que só existe plenamente através da manipulação do participante.'
       },
       {
@@ -1534,7 +1534,7 @@ export const MOVEMENTS: Movement[] = [
         title: 'Uma e Três Cadeiras',
         artist: 'Joseph Kosuth',
         year: '1965',
-        imageUrl: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=800&auto=format&fit=crop',
+        imageUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop',
         description: 'Exposição simultânea de uma cadeira física, uma foto da cadeira e a definição do dicionário da palavra "cadeira".'
       },
       {
@@ -1618,20 +1618,20 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
+        id: 'street-art-graffiti-mural',
+        title: 'Mural Urbano de Graffiti com Spray',
+        artist: 'Artistas Urbanos e Writers de Graffiti',
+        year: '1985–Presente',
+        imageUrl: '/src/assets/images/street_art_graffiti_1790228373350.jpg',
+        description: 'Vibrante mural de graffiti com spray aerossol em parede de tijolos urbanos, expressão máxima da cultura de rua e arte urbana.'
+      },
+      {
         id: 'banksy-balloon-girl',
         title: 'Menina com Balão (Girl with Balloon)',
         artist: 'Banksy',
         year: '2002',
         imageUrl: 'https://images.unsplash.com/photo-1561214115-f2f134cc4912?q=80&w=800&auto=format&fit=crop',
         description: 'Estêncil emblemático de uma jovem vendo seu balão vermelho em formato de coração voar, com a frase "There is always hope".'
-      },
-      {
-        id: 'osgemeos-mural',
-        title: 'O Gigante Amarelo',
-        artist: 'OsGêmeos',
-        year: '2008',
-        imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=800&auto=format&fit=crop',
-        description: 'Mural monumental retratando os personagens amarelos oníricos e a imagética folclórica e urbana brasileira.'
       }
     ],
     influences: ['pop-art', 'dadaismo'],
@@ -1660,6 +1660,14 @@ export const MOVEMENTS: Movement[] = [
       { name: 'Casey Reas', role: 'Co-criador do ambiente de programação Processing', country: 'EUA' }
     ],
     famousWorks: [
+      {
+        id: 'digital-art-anos-90',
+        title: 'Pixel Art & Estética Digital dos Anos 90',
+        artist: 'Pioneiros da Arte Digital',
+        year: '1993',
+        imageUrl: '/src/assets/images/digital_nineties_pixel_1790228343536.jpg',
+        description: 'Gráficos de pixel art e geometria 3D dos anos 90, demonstrando a aurora da criatividade no computador pessoal.'
+      },
       {
         id: 'teamlab-borderless',
         title: 'Borderless Museum',
@@ -1730,6 +1738,14 @@ export const MOVEMENTS: Movement[] = [
       { name: 'Matt DesLauriers', role: 'Pioneiro em creative coding e shader art', country: 'Canadá' }
     ],
     famousWorks: [
+      {
+        id: 'will-smith-spaghetti-generative',
+        title: 'Will Smith Comendo Macarrão (Frame de IA)',
+        artist: 'Modelos de Difusão e Redes Generativas',
+        year: '2023',
+        imageUrl: '/src/assets/images/will_smith_spaghetti_1790228316847.jpg',
+        description: 'O surreal e viral frame de IA generativa de vídeo mostrando Will Smith comendo macarrão — ícone da aurora da arte generativa moderna.'
+      },
       {
         id: 'fidenza-tyler-hobbs',
         title: 'Fidenza',

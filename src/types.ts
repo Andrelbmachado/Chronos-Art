@@ -27,7 +27,10 @@ export interface Artist {
   country: string;
   role: string;
   bio?: string;
+  externalUrl?: string;
 }
+
+export type ArtMedium = 'pintura' | 'escultura' | 'arquitetura' | 'musica';
 
 export interface Artwork {
   id: string;
@@ -37,6 +40,8 @@ export interface Artwork {
   location?: string;
   imageUrl: string;
   description: string;
+  externalUrl?: string;
+  medium?: ArtMedium | string;
 }
 
 export interface Movement {

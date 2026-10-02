@@ -1,8 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Movement, Region, RegionalContextEntry, ContextCategory, CanvasTransform, ThemeMode } from '../types';
 import { ERAS } from '../data/eras';
+import { DINOSAURS, Dinosaur, DINOSAUR_ERAS } from '../data/dinosaurs';
+import { DinosaurDetailDrawer } from './DinosaurDetailDrawer';
 import { Minimap } from './Minimap';
+import { CountryFlag } from './CountryFlag';
 import { 
+  Search,
   ZoomIn, 
   ZoomOut, 
   RotateCcw, 
@@ -16,13 +20,16 @@ interface TimelineCanvasProps {
   regions: Region[];
   regionalContexts: RegionalContextEntry[];
   selectedEra: string;
-  onSelectMovement: (movement: Movement) => void;
+  selectedMovement?: Movement | null;
+  onSelectMovement: (movement: Movement | null) => void;
   onSelectContext: (region: Region, entry: RegionalContextEntry, facetKey?: ContextCategory) => void;
   activeRegions: string[];
   activeCategories: ContextCategory[];
   theme?: ThemeMode;
   searchQuery?: string;
   onTriggerDinoMode?: () => void;
+  isDrawerOpen?: boolean;
+  sidebarWidth?: number;
 }
 
 export interface MovementWithLane extends Movement {
@@ -252,13 +259,16 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   regions,
   regionalContexts,
   selectedEra,
+  selectedMovement = null,
   onSelectMovement,
   onSelectContext,
   activeRegions,
   activeCategories,
   theme = 'dark',
   searchQuery = '',
-  onTriggerDinoMode
+  onTriggerDinoMode,
+  isDrawerOpen = false,
+  sidebarWidth = 480
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDark = theme === 'dark';
@@ -280,22 +290,43 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
+  // Zoom baseline: 0.7 is the standard 100% baseline.
+  // MIN_ZOOM allows deep zoom out so the entire timeline (antiquity to contemporary) fits in a single view
+  const BASE_ZOOM = 0.7;
+  const MIN_ZOOM = 0.07;
+  const MAX_ZOOM = 2.0;
+
   // Transform State (Pan & Zoom)
   const [transform, setTransform] = useState<CanvasTransform>({
-    x: -800,
+    x: -560,
     y: 0,
-    zoom: 1
+    zoom: BASE_ZOOM
   });
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isZoomControlsHovered, setIsZoomControlsHovered] = useState(false);
+  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
+  const zoomTimerRef = useRef<number | null>(null);
   const [hoveredMovement, setHoveredMovement] = useState<MovementWithLane | null>(null);
   const [expandedRegions, setExpandedRegions] = useState<Record<string, boolean>>({
     brasil: true,
     italia: true
   });
 
-  // Easter Egg 5-Second Hold State for Dinosaur Mode
+  // Timeline Mode: 'art' (History of Art) or 'dinosaur' (Mesozoic Era)
+  const [timelineMode, setTimelineMode] = useState<'art' | 'dinosaur'>(() => {
+    return localStorage.getItem('cronos_timeline_mode') === 'dinosaur' ? 'dinosaur' : 'art';
+  });
+  const [selectedDino, setSelectedDino] = useState<Dinosaur | null>(null);
+  const [hoveredDino, setHoveredDino] = useState<Dinosaur | null>(null);
+  const [modeToast, setModeToast] = useState<{ show: boolean; text: string; icon: string } | null>(null);
+  const panToYearRef = useRef<((year: number) => void) | null>(null);
+
+  // Pull-and-Hold States:
+  // - in 'art' mode: forcing past left boundary (Pre-history) triggers Dinosaur Mode
+  // - in 'dinosaur' mode: forcing past right boundary (end of Cretaceous) triggers Art History Mode
   const [isHoldingAtLimit, setIsHoldingAtLimit] = useState<boolean>(false);
+  const [holdDirection, setHoldDirection] = useState<'to-dinosaur' | 'to-art' | null>(null);
   const [holdProgress, setHoldProgress] = useState<number>(0);
   const holdIntervalRef = useRef<number | null>(null);
   const holdStartTimeRef = useRef<number>(0);
@@ -315,14 +346,29 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     }
   }, []);
 
-  // Calculate year position mapped to canvas X coordinate (supports from 4 million BCE to 2026 CE)
+  // Calculate year position mapped to canvas X coordinate:
+  // - In 'dinosaur' mode: spans -252 Ma (200px) to -66 Ma (4200px)
+  // - In 'art' mode: spans -40.000 (200px) to 2026 (9800px)
   const yearToX = useCallback((year: number) => {
+    if (timelineMode === 'dinosaur') {
+      if (year <= -201000000) {
+        // Triássico (-252 Ma to -201 Ma) -> Maps to [200, 1400] (width: 1200)
+        const ratio = Math.max(0, Math.min(1, (year - (-252000000)) / ((-201000000) - (-252000000))));
+        return 200 + ratio * 1200;
+      } else if (year <= -145000000) {
+        // Jurássico (-201 Ma to -145 Ma) -> Maps to [1400, 2600] (width: 1200)
+        const ratio = Math.max(0, Math.min(1, (year - (-201000000)) / ((-145000000) - (-201000000))));
+        return 1400 + ratio * 1200;
+      } else {
+        // Cretáceo (-145 Ma to -66 Ma) -> Maps to [2600, 4200] (width: 1600)
+        const ratio = Math.max(0, Math.min(1, (year - (-145000000)) / ((-66000000) - (-145000000))));
+        return 2600 + ratio * 1600;
+      }
+    }
+
+    // Art mode coordinates
     let x = 0;
-    if (year < -40000) {
-      // 4 million BCE (-4,000,000) to 40,000 BCE (-40,000)
-      const ratio = Math.max(0, (year - (-4000000)) / ((-40000) - (-4000000)));
-      x = -1200 + ratio * 1200; // -1200 at -4Ma, 0 at -40,000
-    } else if (year < -10000) {
+    if (year < -10000) {
       x = ((year - (-40000)) / 30000) * 800;
     } else if (year < -3000) {
       x = 800 + ((year - (-10000)) / 7000) * 800;
@@ -336,44 +382,72 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       x = 7200 + ((year - 1945) / 81) * 2400;
     }
     return x + 200;
-  }, []);
+  }, [timelineMode]);
 
-  // Boundary: Strict lock at 4 million years ago (-4,000,000 BCE)
-  // At -4,000,000, yearToX(-4000000) = -1000
-  // Left limit constraint:
-  // When looking at -4 million years, the mark at canvas X = -1000 locks at 40px from the left edge of the screen
-  // Screen X = transform.x + (-1000) * zoom = 40 => transform.x = 40 + 1000 * zoom
+  // Boundary constraints:
+  // When zoomed out far, the entire timeline fits horizontally on the screen!
+  // Center it gracefully or allow comfortable panning without sticking
   const getMaxAllowedX = useCallback((zoom: number) => {
-    return 40 + 1000 * zoom;
-  }, []);
+    const totalW = timelineMode === 'dinosaur' ? 4200 : 9800;
+    const scaled = totalW * zoom;
+    if (scaled <= viewportWidth - 60) {
+      return Math.max(60, (viewportWidth - scaled) / 2);
+    }
+    // Allow moving the timeline and country layers comfortably to the right so the left edge is fully visible
+    return Math.max(60, 80 * zoom);
+  }, [viewportWidth, timelineMode]);
 
   // Right limit constraint:
-  // Present/future (year 2026 at yearToX(2026) = 9800) should not scroll past right edge
+  // - In dinosaur mode: end of Cretáceo (4200px)
+  // - In art mode: present 2026 (9800px)
   const getMinAllowedX = useCallback((zoom: number) => {
-    return (viewportWidth - 120) - 9800 * zoom;
-  }, [viewportWidth]);
+    const totalW = timelineMode === 'dinosaur' ? 4200 : 9800;
+    const scaled = totalW * zoom;
+    if (scaled <= viewportWidth - 60) {
+      return Math.min(20, (viewportWidth - scaled) / 2 - 40);
+    }
+    return (viewportWidth - 120) - scaled;
+  }, [viewportWidth, timelineMode]);
 
-  // Hold Timer functions for Dinosaur Mode Easter Egg (mobile pull-to-refresh lateral interaction)
-  const startHoldTimer = useCallback(() => {
+  // Hold Timer for switching between modes:
+  // - 'to-dinosaur': triggered by forcing left at start of art timeline
+  // - 'to-art': triggered by forcing right at end of dinosaur timeline
+  const startHoldTimer = useCallback((direction: 'to-dinosaur' | 'to-art') => {
     if (holdIntervalRef.current) return;
     setIsHoldingAtLimit(true);
+    setHoldDirection(direction);
     holdStartTimeRef.current = Date.now();
 
     holdIntervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - holdStartTimeRef.current;
-      const pct = Math.min(100, (elapsed / 2200) * 100);
+      const pct = Math.min(100, (elapsed / 1800) * 100);
       setHoldProgress(pct);
 
-      if (elapsed >= 2200) {
+      if (elapsed >= 1800) {
         if (holdIntervalRef.current) {
           clearInterval(holdIntervalRef.current);
           holdIntervalRef.current = null;
         }
         setIsHoldingAtLimit(false);
         setHoldProgress(0);
+        setHoldDirection(null);
         isDraggingRef.current = false;
         setIsDragging(false);
-        onTriggerDinoMode?.();
+
+        if (direction === 'to-dinosaur') {
+          setTimelineMode('dinosaur');
+          localStorage.setItem('cronos_timeline_mode', 'dinosaur');
+          setTransform({ x: 60, y: -20, zoom: 0.85 });
+          setModeToast({ show: true, text: 'Modo Dinossauros ativado! Explore o Mesozoico.', icon: '🦖' });
+          setTimeout(() => setModeToast(null), 4500);
+          onTriggerDinoMode?.();
+        } else {
+          setTimelineMode('art');
+          localStorage.setItem('cronos_timeline_mode', 'art');
+          setTransform({ x: 60, y: -20, zoom: 0.85 });
+          setModeToast({ show: true, text: 'Modo História da Arte restaurado!', icon: '🎨' });
+          setTimeout(() => setModeToast(null), 4500);
+        }
       }
     }, 25);
   }, [onTriggerDinoMode]);
@@ -385,6 +459,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     }
     setIsHoldingAtLimit(false);
     setHoldProgress(0);
+    setHoldDirection(null);
   }, []);
 
   useEffect(() => {
@@ -395,7 +470,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     };
   }, []);
 
-  // Calculate vertical lanes so overlapping periods stack vertically into separate rows
+  // Calculate vertical lanes so overlapping art movements stack vertically into separate rows
   const movementLanes = useMemo(() => {
     const sorted = [...movements].sort((a, b) => a.startYear - b.startYear || a.endYear - b.endYear);
     const laneEndPositions: number[] = [];
@@ -405,11 +480,9 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       const startX = yearToX(m.startYear);
       const endX = yearToX(m.endYear);
       const rawWidth = Math.max(0, endX - startX);
-      // Period cards reflect exact chronological duration: longer periods are wider, shorter periods are compact
-      const cardWidth = Math.max(140, rawWidth);
+      const cardWidth = Math.max(175, rawWidth);
       const cardRight = startX + cardWidth;
 
-      // Find the first lane where card fits without horizontal collision
       let targetLane = -1;
       for (let i = 0; i < laneEndPositions.length; i++) {
         if (laneEndPositions[i] + minSpacingPx <= startX) {
@@ -419,7 +492,6 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         }
       }
 
-      // If no existing lane fits, stack into a new vertical row
       if (targetLane === -1) {
         targetLane = laneEndPositions.length;
         laneEndPositions.push(cardRight);
@@ -440,9 +512,58 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     };
   }, [movements, yearToX]);
 
-  const cardHeight = 115;
+  // Selected movement positioned in lanes for persistent hover line & country connection
+  const selectedMovementWithLane = useMemo(() => {
+    if (!selectedMovement) return null;
+    return movementLanes.positionedMovements.find(m => m.id === selectedMovement.id) || null;
+  }, [selectedMovement, movementLanes.positionedMovements]);
+
+  // Calculate vertical lanes for Dinosaurs in prehistoric deep-time section
+  const dinosaurLanes = useMemo(() => {
+    const sorted = [...DINOSAURS].sort((a, b) => a.startYear - b.startYear || a.endYear - b.endYear);
+    const laneEndPositions: number[] = [];
+    const minSpacingPx = 16;
+
+    const positioned = sorted.map((d) => {
+      const startX = yearToX(d.startYear);
+      const endX = yearToX(d.endYear);
+      const rawWidth = Math.max(0, endX - startX);
+      const cardWidth = Math.max(185, Math.min(280, rawWidth));
+      const cardRight = startX + cardWidth;
+
+      let targetLane = -1;
+      for (let i = 0; i < laneEndPositions.length; i++) {
+        if (laneEndPositions[i] + minSpacingPx <= startX) {
+          targetLane = i;
+          laneEndPositions[i] = cardRight;
+          break;
+        }
+      }
+
+      if (targetLane === -1) {
+        targetLane = laneEndPositions.length;
+        laneEndPositions.push(cardRight);
+      }
+
+      return {
+        ...d,
+        lane: targetLane,
+        startX,
+        endX,
+        cardWidth
+      };
+    });
+
+    return {
+      positionedDinosaurs: positioned,
+      totalLanes: Math.max(1, laneEndPositions.length)
+    };
+  }, [yearToX]);
+
+  const cardHeight = 135;
   const laneGap = 16;
-  const movementTrackHeight = Math.max(280, movementLanes.totalLanes * (cardHeight + laneGap) + 30);
+  const maxLanes = Math.max(movementLanes.totalLanes, dinosaurLanes.totalLanes);
+  const movementTrackHeight = Math.max(280, maxLanes * (cardHeight + laneGap) + 30);
 
   // Filter active regions
   const visibleRegions = useMemo(() => 
@@ -451,19 +572,20 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   );
 
   // Vertical Y Boundary Constraints
-  // Upper limit: user cannot pan too far up (cannot detach timeline content from sticky ruler)
+  // Upper limit: user can pan comfortably downwards to view the top cards without sticking
   const getMaxAllowedY = useCallback(() => {
-    return 0; // The canvas content is anchored directly below the 70px sticky ruler
+    return 120; // Generous upper breathing room so user never gets stopped abruptly
   }, []);
 
-  // Lower limit: user cannot scroll into void below the contextual cards
+  // Lower limit: user can scroll all the way through all country tracks and back up smoothly
   const getMinAllowedY = useCallback((zoom: number) => {
     const containerHeight = containerRef.current?.clientHeight || 800;
-    // Total content height: top padding (75) + central track (movementTrackHeight + 16) + context tracks (visibleRegions.length * 186) + padding
-    const totalContentHeight = 75 + movementTrackHeight + 16 + (visibleRegions.length * 186) + 40;
+    // In dinosaur mode, there are no country context tracks, so height is neatly compact
+    const contextTracksHeight = timelineMode === 'dinosaur' ? 0 : (visibleRegions.length * 240);
+    const totalContentHeight = 75 + movementTrackHeight + 24 + contextTracksHeight + 400;
     const scaledHeight = totalContentHeight * zoom;
-    return Math.min(0, containerHeight - scaledHeight);
-  }, [visibleRegions.length, movementTrackHeight]);
+    return Math.min(-200, containerHeight - scaledHeight - 120);
+  }, [visibleRegions.length, movementTrackHeight, timelineMode]);
 
   // Helper to extract regional context summary at a specific year
   const getCountryStatusAtYear = useCallback((regionId: string, year: number) => {
@@ -561,17 +683,25 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     const maxAllowedY = getMaxAllowedY();
     const minAllowedY = getMinAllowedY(transform.zoom);
 
-    // Lateral overscroll elastic pull at past boundary (4 million years ago)
+    // Lateral overscroll elastic pull at boundaries
     let newX = rawNewX;
     if (rawNewX > maxAllowedX) {
       const overX = rawNewX - maxAllowedX;
-      // Pull-to-refresh gentle elastic resistance
+      // Pull gentle elastic resistance
       newX = maxAllowedX + Math.min(45, Math.pow(overX, 0.72));
-      startHoldTimer();
+      if (timelineMode === 'art') {
+        startHoldTimer('to-dinosaur');
+      } else {
+        cancelHoldTimer();
+      }
     } else if (rawNewX < minAllowedX) {
       const underX = minAllowedX - rawNewX;
-      newX = minAllowedX - Math.min(30, Math.pow(underX, 0.72));
-      cancelHoldTimer();
+      newX = minAllowedX - Math.min(45, Math.pow(underX, 0.72));
+      if (timelineMode === 'dinosaur') {
+        startHoldTimer('to-art');
+      } else {
+        cancelHoldTimer();
+      }
     } else {
       cancelHoldTimer();
       newX = rawNewX;
@@ -596,7 +726,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       x: newX,
       y: newY
     }));
-  }, [transform.x, transform.y, transform.zoom, getMaxAllowedX, getMinAllowedX, getMaxAllowedY, getMinAllowedY, startHoldTimer, cancelHoldTimer]);
+  }, [transform.x, transform.y, transform.zoom, getMaxAllowedX, getMinAllowedX, getMaxAllowedY, getMinAllowedY, startHoldTimer, cancelHoldTimer, timelineMode]);
 
   // Handle Drag End with automatic spring recoil if pulled beyond boundaries
   const handleDragEnd = useCallback(() => {
@@ -728,7 +858,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       if (e.ctrlKey) {
         const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
         setTransform(prev => {
-          const newZoom = Math.max(0.35, Math.min(2.8, prev.zoom * zoomFactor));
+          const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.zoom * zoomFactor));
           const rect = container.getBoundingClientRect();
           const mouseX = e.clientX - rect.left;
           const mouseY = e.clientY - rect.top;
@@ -812,8 +942,15 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     }));
   };
 
-  const panToYear = (year: number) => {
+  const panToYear = useCallback((year: number) => {
     stopInertia();
+    if (year < -40000 && timelineMode !== 'dinosaur') {
+      setTimelineMode('dinosaur');
+      localStorage.setItem('cronos_timeline_mode', 'dinosaur');
+    } else if (year >= -40000 && timelineMode === 'dinosaur') {
+      setTimelineMode('art');
+      localStorage.setItem('cronos_timeline_mode', 'art');
+    }
     const targetX = yearToX(year);
     const containerWidth = containerRef.current?.clientWidth || 1000;
     const rawTargetXPosition = -(targetX * transform.zoom) + containerWidth / 3;
@@ -825,7 +962,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     const startX = transform.x;
     const diff = targetXPosition - startX;
     const startTime = performance.now();
-    const duration = 500;
+    const duration = 550;
 
     const animateStep = (now: number) => {
       const progress = Math.min(1, (now - startTime) / duration);
@@ -839,33 +976,121 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       }
     };
     inertiaRafRef.current = requestAnimationFrame(animateStep);
-  };
+  }, [stopInertia, timelineMode, yearToX, transform.zoom, transform.x, getMaxAllowedX, getMinAllowedX]);
+
+  useEffect(() => {
+    panToYearRef.current = panToYear;
+  }, [panToYear]);
+
+  const handleSetTransformX = useCallback((newX: number) => {
+    stopInertia();
+    const maxAllowedX = getMaxAllowedX(transform.zoom);
+    const minAllowedX = getMinAllowedX(transform.zoom);
+    setTransform(prev => ({
+      ...prev,
+      x: Math.min(maxAllowedX, Math.max(minAllowedX, newX))
+    }));
+  }, [stopInertia, getMaxAllowedX, getMinAllowedX, transform.zoom]);
+
+  // Smooth hover open and graceful delayed close for zoom controls
+  const handleZoomMouseEnter = useCallback(() => {
+    if (zoomTimerRef.current) {
+      clearTimeout(zoomTimerRef.current);
+      zoomTimerRef.current = null;
+    }
+    setIsZoomControlsHovered(true);
+  }, []);
+
+  const handleZoomMouseLeave = useCallback(() => {
+    if (zoomTimerRef.current) {
+      clearTimeout(zoomTimerRef.current);
+    }
+    zoomTimerRef.current = window.setTimeout(() => {
+      setIsZoomControlsHovered(false);
+      zoomTimerRef.current = null;
+    }, 1200);
+  }, []);
+
+  const handleZoomIn = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    stopInertia();
+    setTransform(prev => {
+      const newZoom = Math.min(MAX_ZOOM, prev.zoom * 1.25);
+      const maxAllowedX = getMaxAllowedX(newZoom);
+      const minAllowedX = getMinAllowedX(newZoom);
+      const maxAllowedY = getMaxAllowedY();
+      const minAllowedY = getMinAllowedY(newZoom);
+      return {
+        ...prev,
+        x: Math.min(maxAllowedX, Math.max(minAllowedX, prev.x)),
+        y: Math.min(maxAllowedY, Math.max(minAllowedY, prev.y)),
+        zoom: newZoom
+      };
+    });
+  }, [stopInertia, getMaxAllowedX, getMinAllowedX, getMaxAllowedY, getMinAllowedY, MAX_ZOOM]);
+
+  const handleZoomOut = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    stopInertia();
+    setTransform(prev => {
+      const newZoom = Math.max(MIN_ZOOM, prev.zoom / 1.25);
+      const maxAllowedX = getMaxAllowedX(newZoom);
+      const minAllowedX = getMinAllowedX(newZoom);
+      const maxAllowedY = getMaxAllowedY();
+      const minAllowedY = getMinAllowedY(newZoom);
+      return {
+        ...prev,
+        x: Math.min(maxAllowedX, Math.max(minAllowedX, prev.x)),
+        y: Math.min(maxAllowedY, Math.max(minAllowedY, prev.y)),
+        zoom: newZoom
+      };
+    });
+  }, [stopInertia, getMaxAllowedX, getMinAllowedX, getMaxAllowedY, getMinAllowedY, MIN_ZOOM]);
+
+  const handleResetZoom = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    stopInertia();
+    setTransform({ x: -560, y: 0, zoom: BASE_ZOOM });
+  }, [stopInertia, BASE_ZOOM]);
+
+  useEffect(() => {
+    return () => {
+      if (zoomTimerRef.current) {
+        clearTimeout(zoomTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleCardClick = (m: Movement) => {
     // Prevent accidental click when swiping/gliding
     if (dragDistRef.current > 6) return;
-    onSelectMovement(m);
+    if (selectedMovement?.id === m.id) {
+      onSelectMovement(null);
+    } else {
+      onSelectMovement(m);
+    }
   };
 
-  // Calculate coordinates in screen space for the single continuous connection line
-  // bridging the sticky year ruler, card center, and country layers without any gap or seams
+  // Calculate coordinates in screen space for the connection line
+  // bridging the sticky year ruler to card top-center, and from card bottom-center down to country layers
   const curveData = useMemo(() => {
-    if (!hoveredMovement) return null;
+    const activeMov = hoveredMovement || selectedMovementWithLane;
+    if (!activeMov) return null;
 
-    // Movement card center in canvas coordinates:
+    // Movement card center and top/bottom edges in canvas coordinates:
     const trackContentTop = 75 + 8 + 8;
-    const cardTop = trackContentTop + (hoveredMovement.lane * (cardHeight + laneGap) + 12);
-    const cardLocalCenterY = cardTop + (cardHeight / 2);
-    const cardLocalCenterX = hoveredMovement.startX + (hoveredMovement.cardWidth / 2);
+    const cardTop = trackContentTop + (activeMov.lane * (cardHeight + laneGap) + 12);
+    const cardBottom = cardTop + cardHeight;
+    const cardLocalCenterX = activeMov.startX + (activeMov.cardWidth / 2);
 
     // Convert to screen coordinates:
     const cardScreenCenterX = transform.x + cardLocalCenterX * transform.zoom;
-    const cardScreenCenterY = transform.y + cardLocalCenterY * transform.zoom;
+    const cardScreenTopY = transform.y + cardTop * transform.zoom;
+    const cardScreenBottomY = transform.y + cardBottom * transform.zoom;
 
     // Ruler start year in screen coordinates:
-    const rulerScreenX = transform.x + yearToX(hoveredMovement.startYear) * transform.zoom;
-    const rulerTopY = 24; // directly beneath the year pill badge in sticky ruler
-    const rulerExitY = 66; // at the bottom border of the sticky ruler
+    const rulerScreenX = transform.x + yearToX(activeMov.startYear) * transform.zoom;
+    const rulerBottomY = 72; // exact bottom border of the sticky ruler bar
 
     // Regional country points in screen coordinates:
     const trackBottom = trackContentTop + movementTrackHeight + 8;
@@ -873,16 +1098,20 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
     const regionRowStep = 186;
     const regionTrackCenterOffset = 96;
 
-    const screenPoints: Array<{ x: number; y: number }> = [];
+    // Segment 1 (Upper): from ruler bottom edge down to the top-center edge of the card (in screen coordinates)
+    const upperPoints: Array<{ x: number; y: number }> = [
+      { x: rulerScreenX, y: rulerBottomY },
+      { x: cardScreenCenterX, y: cardScreenTopY }
+    ];
+    const upperPathD = generateSmoothVerticalSpline(upperPoints);
 
-    // Point 0: at the ruler badge
-    screenPoints.push({ x: rulerScreenX, y: rulerTopY });
-    // Point 1: vertical guide passing through the ruler bottom border
-    screenPoints.push({ x: rulerScreenX, y: rulerExitY });
-    // Point 2: card center
-    screenPoints.push({ x: cardScreenCenterX, y: cardScreenCenterY });
+    // Segment 2 (Lower): starts from bottom-center of card down into country layers (in local canvas coordinates)
+    // Rendering in local coordinates inside the canvas container allows it to pass BEHIND movement cards (z-30)
+    // while passing ABOVE country context tracks (z-10)
+    const localLowerPoints: Array<{ x: number; y: number }> = [
+      { x: cardLocalCenterX, y: cardBottom }
+    ];
 
-    // Points 3+: country layers
     const countryNodes: Array<{
       regionId: string;
       regionName: string;
@@ -890,19 +1119,15 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       yearFormatted: string;
       localX: number;
       localY: number;
-      x: number;
-      y: number;
       status: string;
     }> = [];
 
     visibleRegions.forEach((region, idx) => {
-      const countryYear = getCountryMovementYear(hoveredMovement, region.id);
+      const countryYear = getCountryMovementYear(activeMov, region.id);
       const countryLocalX = yearToX(countryYear);
       const countryLocalY = regionListTop + idx * regionRowStep + regionTrackCenterOffset;
-      const screenX = transform.x + countryLocalX * transform.zoom;
-      const screenY = transform.y + countryLocalY * transform.zoom;
 
-      screenPoints.push({ x: screenX, y: screenY });
+      localLowerPoints.push({ x: countryLocalX, y: countryLocalY });
 
       const yearFormatted = countryYear < 0 
         ? `${Math.abs(countryYear)} a.C.` 
@@ -915,24 +1140,47 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         yearFormatted,
         localX: countryLocalX,
         localY: countryLocalY,
-        x: screenX,
-        y: screenY,
         status: getCountryStatusAtYear(region.id, countryYear)
       });
     });
 
-    const pathD = generateSmoothVerticalSpline(screenPoints);
+    const localLowerPathD = localLowerPoints.length >= 2 ? generateSmoothVerticalSpline(localLowerPoints) : '';
 
     return {
       rulerScreenX,
-      rulerTopY,
-      rulerExitY,
-      cardCenterX: cardScreenCenterX,
-      cardCenterY: cardScreenCenterY,
-      pathD,
+      rulerBottomY,
+      cardScreenCenterX,
+      cardScreenTopY,
+      cardLocalCenterX,
+      cardBottom,
+      upperPathD,
+      localLowerPathD,
       countryNodes
     };
-  }, [hoveredMovement, visibleRegions, yearToX, cardHeight, laneGap, movementTrackHeight, getCountryStatusAtYear, transform.x, transform.y, transform.zoom]);
+  }, [hoveredMovement, selectedMovementWithLane, visibleRegions, yearToX, cardHeight, laneGap, movementTrackHeight, getCountryStatusAtYear, transform.x, transform.y, transform.zoom]);
+
+  // Active ruler years including illuminated hover start year if not already present
+  const activeRulerYears = useMemo(() => {
+    if (timelineMode === 'dinosaur') {
+      const base = [-252000000, -201000000, -145000000, -66000000];
+      if (hoveredDino && !base.includes(hoveredDino.startYear)) {
+        return [...base, hoveredDino.startYear].sort((a, b) => a - b);
+      }
+      return base;
+    }
+
+    const base = [-40000, -25000, -10000, -5000, -3000, -1000, 0, 500, 1000, 1400, 1500, 1600, 1700, 1780, 1850, 1900, 1920, 1945, 1970, 2000, 2026];
+    const targetMov = hoveredMovement || selectedMovement;
+    if (targetMov && !base.includes(targetMov.startYear)) {
+      return [...base, targetMov.startYear].sort((a, b) => a - b);
+    }
+    return base;
+  }, [timelineMode, hoveredMovement, selectedMovement, hoveredDino]);
+
+  // Active Eras Row: Dinosaur Eras or Art History Eras based on current mode
+  const displayedEras = useMemo(() => {
+    return timelineMode === 'dinosaur' ? DINOSAUR_ERAS : ERAS;
+  }, [timelineMode]);
 
   // Filter movements if search query is active
   const queryLower = searchQuery.toLowerCase().trim();
@@ -949,7 +1197,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full h-[calc(100vh-50px)] overflow-hidden select-none transition-colors duration-200 ${
+      className={`relative w-full h-full overflow-hidden select-none transition-colors duration-200 ${
         isDark ? 'bg-[#18181b]' : 'bg-[#fbf9f5]'
       } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       onMouseDown={handleMouseDown}
@@ -972,107 +1220,32 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         }}
       />
 
-      {/* Floating Monochromatic Zoom Controls */}
-      <div 
-        className={`absolute top-4 right-4 z-40 flex flex-col gap-1.5 p-1.5 rounded-xl border shadow-lg backdrop-blur-md transition-colors ${
-          isDark 
-            ? 'bg-[#18181b]/90 border-neutral-800 text-neutral-200' 
-            : 'bg-[#faf8f5]/90 border-[#e2ddd5] text-neutral-800'
-        }`}
-      >
-        <button
-          onClick={() => {
-            stopInertia();
-            setTransform(prev => {
-              const newZoom = Math.min(2.8, prev.zoom * 1.2);
-              const maxAllowedX = getMaxAllowedX(newZoom);
-              const minAllowedX = getMinAllowedX(newZoom);
-              const maxAllowedY = getMaxAllowedY();
-              const minAllowedY = getMinAllowedY(newZoom);
-              return {
-                ...prev,
-                x: Math.min(maxAllowedX, Math.max(minAllowedX, prev.x)),
-                y: Math.min(maxAllowedY, Math.max(minAllowedY, prev.y)),
-                zoom: newZoom
-              };
-            });
-          }}
-          className={`p-2 rounded-lg transition-colors ${
-            isDark ? 'hover:bg-neutral-800 text-neutral-200' : 'hover:bg-neutral-200 text-neutral-800'
-          }`}
-          title="Aproximar (+)"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => {
-            stopInertia();
-            setTransform(prev => {
-              const newZoom = Math.max(0.35, prev.zoom / 1.2);
-              const maxAllowedX = getMaxAllowedX(newZoom);
-              const minAllowedX = getMinAllowedX(newZoom);
-              const maxAllowedY = getMaxAllowedY();
-              const minAllowedY = getMinAllowedY(newZoom);
-              return {
-                ...prev,
-                x: Math.min(maxAllowedX, Math.max(minAllowedX, prev.x)),
-                y: Math.min(maxAllowedY, Math.max(minAllowedY, prev.y)),
-                zoom: newZoom
-              };
-            });
-          }}
-          className={`p-2 rounded-lg transition-colors ${
-            isDark ? 'hover:bg-neutral-800 text-neutral-200' : 'hover:bg-neutral-200 text-neutral-800'
-          }`}
-          title="Afastar (-)"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => {
-            stopInertia();
-            setTransform({ x: -800, y: 0, zoom: 1 });
-          }}
-          className={`p-2 rounded-lg transition-colors ${
-            isDark ? 'hover:bg-neutral-800 text-neutral-200' : 'hover:bg-neutral-200 text-neutral-800'
-          }`}
-          title="Resetar Posição"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
-        <div 
-          className={`text-[10px] text-center font-mono font-medium border-t pt-1 ${
-            isDark ? 'border-neutral-800 text-neutral-400' : 'border-[#e2ddd5] text-neutral-600'
-          }`}
-        >
-          {Math.round(transform.zoom * 100)}%
-        </div>
-      </div>
-
       {/* =========================================================== */}
       {/* STICKY TIMELINE YEAR RULER (FIXED ON SCREEN TOP)            */}
       {/* =========================================================== */}
       <div 
-        className={`absolute top-0 left-0 right-0 z-30 shadow-md py-2 overflow-hidden pointer-events-auto border-b backdrop-blur-md select-none ${
+        style={{ zIndex: 50 }}
+        className={`absolute top-0 left-0 right-0 shadow-md py-2 overflow-hidden pointer-events-auto border-b backdrop-blur-md select-none ${
           isDark 
             ? 'bg-[#18181b]/95 border-neutral-800/90 text-neutral-200' 
             : 'bg-[#faf8f5]/95 border-[#e5e0d8] text-neutral-800'
         }`}
+        title="Barra de Anos • Linha cronológica interativa. Role ou arraste horizontalmente para navegar no tempo."
       >
-        {/* Subtle Pull-To-Refresh Mini Loading Icon at the limit of the ruler bar */}
+        {/* Subtle Pull-To-Refresh Mini Loading Icon at the limits of the ruler bar */}
         {holdProgress > 0 && (
           <div 
-            className="absolute z-50 pointer-events-none transition-all duration-75 flex items-center justify-center"
-            style={{
-              left: `${Math.max(12, transform.x + yearToX(-4000000) * transform.zoom - 15)}px`,
-              top: '50%',
-              transform: 'translateY(-50%)'
-            }}
+            className="absolute z-50 pointer-events-none transition-all duration-75 flex items-center gap-2"
+            style={
+              holdDirection === 'to-art'
+                ? { right: '24px', top: '50%', transform: 'translateY(-50%)' }
+                : { left: `${Math.max(16, transform.x + yearToX(-40000) * transform.zoom - 20)}px`, top: '50%', transform: 'translateY(-50%)' }
+            }
           >
             <div className={`w-7 h-7 rounded-full p-1 shadow-md border flex items-center justify-center backdrop-blur-md ${
               isDark 
-                ? 'bg-neutral-900/95 border-neutral-700/80 text-amber-400' 
-                : 'bg-white/95 border-neutral-300 text-amber-500'
+                ? 'bg-neutral-900/95 border-amber-500/80 text-amber-400' 
+                : 'bg-white/95 border-amber-500 text-amber-500'
             }`}>
               <svg className="w-5 h-5 -rotate-90" viewBox="0 0 24 24">
                 <circle
@@ -1096,6 +1269,13 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
                 />
               </svg>
             </div>
+            <span className={`text-[11px] font-medium font-mono px-2 py-0.5 rounded shadow-sm border backdrop-blur-md ${
+              isDark ? 'bg-neutral-900/90 text-amber-300 border-amber-800/80' : 'bg-white/90 text-amber-800 border-amber-300'
+            }`}>
+              {holdDirection === 'to-dinosaur' 
+                ? 'Segure 2s para entrar no Modo Dinossauro...'
+                : 'Segure 2s para voltar à História da Arte...'}
+            </span>
           </div>
         )}
 
@@ -1108,26 +1288,42 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
         >
           {/* Era Banners Row Synchronized with Zoom and Pan */}
           <div className="relative h-8 w-full">
-            {ERAS.map((era) => {
+            {displayedEras.map((era) => {
               const startX = yearToX(era.startYear) * transform.zoom;
               const endX = yearToX(era.endYear) * transform.zoom;
-              const width = Math.max(70, endX - startX);
+              const width = Math.max(90, endX - startX);
+              const isDinoEra = timelineMode === 'dinosaur';
               return (
                 <div
                   key={era.id}
                   onClick={() => panToYear(era.startYear)}
-                  className={`absolute top-0 h-7 rounded-md border px-2.5 py-0.5 flex items-center justify-between text-[11px] font-semibold cursor-pointer transition-colors ${
-                    isDark 
-                      ? 'bg-neutral-800/70 border-neutral-700/80 text-neutral-200 hover:bg-neutral-700/90' 
-                      : 'bg-[#ede8df] border-[#ded8cc] text-neutral-800 hover:bg-[#e4ded4]'
+                  className={`absolute top-0 h-7 rounded-md border px-2 py-0.5 flex items-center justify-between text-[11px] font-medium cursor-pointer transition-colors shadow-xs ${
+                    isDinoEra
+                      ? (isDark 
+                          ? 'bg-amber-950/60 border-amber-800/80 text-amber-200 hover:bg-amber-900/60' 
+                          : 'bg-amber-100/90 border-amber-300 text-amber-900 hover:bg-amber-200/90')
+                      : (isDark 
+                          ? 'bg-neutral-800/80 border-neutral-700/70 text-neutral-200 hover:bg-neutral-700/80' 
+                          : 'bg-[#ede8df] border-[#ded8cc] text-neutral-800 hover:bg-[#e4ded4]')
                   }`}
                   style={{
                     left: `${startX}px`,
                     width: `${width - 4}px`
                   }}
+                  title={`Grande Período: ${era.name} (${era.displayYears}) • Clique para posicionar a linha do tempo neste período`}
                 >
-                  <span className="truncate pr-1">{era.name}</span>
-                  <span className={`text-[9px] font-mono shrink-0 ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>
+                  <span className="truncate pr-1 tracking-normal" title={era.name}>
+                    {isDinoEra ? '🦕 ' : ''}
+                    {era.name}
+                  </span>
+                  <span 
+                    className={`text-[10px] font-mono shrink-0 ml-1.5 ${
+                      isDinoEra
+                        ? (isDark ? 'text-amber-400' : 'text-amber-700')
+                        : (isDark ? 'text-neutral-400' : 'text-neutral-500')
+                    }`}
+                    title={`Anos do período: ${era.displayYears} • Clique para navegar`}
+                  >
                     {era.displayYears}
                   </span>
                 </div>
@@ -1141,70 +1337,82 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
               isDark ? 'border-neutral-800 text-neutral-400' : 'border-[#e5e0d8] text-neutral-600'
             }`}
           >
-            {/* Year 0 Red Indicator Line in Sticky Ruler */}
-            <div
-              className="absolute top-0 bottom-0 -translate-x-1/2 flex flex-col items-center pointer-events-none z-30"
-              style={{ left: `${yearToX(0) * transform.zoom}px` }}
-            >
-              <div className="w-1 h-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
-              <span className="absolute -top-1 px-1.5 py-0.5 rounded text-[8px] font-mono font-black bg-red-600 text-white shadow-xs">
-                Ano 0
-              </span>
-            </div>
-
-            {/* 4 Million BCE Boundary Line in Sticky Ruler */}
-            <div
-              className="absolute top-0 bottom-0 -translate-x-1/2 flex flex-col items-center pointer-events-none z-30"
-              style={{ left: `${yearToX(-4000000) * transform.zoom}px` }}
-            >
-              <div className="w-1 h-full bg-amber-500/70" />
-              <span className="absolute -top-1 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-amber-600/90 text-white shadow-xs whitespace-nowrap">
-                4 Ma a.C.
-              </span>
-            </div>
-
-            {/* Hover Start Year Badge in Sticky Ruler */}
-            {hoveredMovement && (
+            {/* Year 0 Red Indicator Line in Sticky Ruler (centered, only in art mode) */}
+            {timelineMode === 'art' && (
               <div
-                className="absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-none z-40"
-                style={{ left: `${yearToX(hoveredMovement.startYear) * transform.zoom}px` }}
+                className="absolute top-0 bottom-0 -translate-x-1/2 flex flex-col items-center justify-center pointer-events-none z-30"
+                style={{ left: `${yearToX(0) * transform.zoom}px` }}
+                title="Ano 0 • Marco divisor histórico universal entre a.C. e d.C."
               >
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500 text-white shadow-md border border-sky-300 whitespace-nowrap">
-                  Início: {hoveredMovement.startYear < 0 ? `${Math.abs(hoveredMovement.startYear)} a.C.` : `${hoveredMovement.startYear} d.C.`}
+                <div className="w-1.5 h-full bg-red-500 shadow-[0_0_12px_rgba(239,68,68,1)]" />
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-mono font-black bg-red-600 text-white shadow-md border border-red-300 tracking-wider uppercase whitespace-nowrap">
+                  ANO 0
                 </span>
               </div>
             )}
 
-            {[-4000000, -40000, -25000, -10000, -5000, -3000, -1000, 0, 500, 1000, 1400, 1500, 1600, 1700, 1780, 1850, 1900, 1920, 1945, 1970, 2000, 2026].map(year => {
+            {activeRulerYears.map(year => {
+              const targetMov = hoveredMovement || selectedMovement;
+              const isHoveredYear = (targetMov?.startYear === year) || (hoveredDino?.startYear === year);
               const posX = yearToX(year) * transform.zoom;
-              const formattedYear = year === -4000000 
-                ? '4 Ma a.C.' 
+              const formattedYear = year <= -1000000 
+                ? `${Math.round(Math.abs(year) / 1000000)} Ma a.C.` 
                 : year < 0 
-                  ? `${Math.abs(year)} a.C.` 
+                  ? `${Math.abs(year).toLocaleString('pt-BR')} a.C.` 
                   : `${year} d.C.`;
               const isYearZero = year === 0;
-              const isLimitYear = year === -4000000;
-              const isMajor = isYearZero || isLimitYear || Math.abs(year) >= 10000 || year === 0 || year === 1500 || year === 2000 || year === 2026;
+              const isDinoYear = year <= -1000000;
+              const isLimitYear = timelineMode === 'dinosaur' ? (year === -252000000 || year === -66000000) : year === -40000;
+              const isMajor = isYearZero || isLimitYear || isDinoYear || Math.abs(year) >= 3000 || year === 0 || year === 500 || year === 1000 || year === 1400 || year === 1500 || year === 1850 || year === 1900 || year === 1945 || year === 2000 || year === 2026;
 
-              // Optimize readability when zoomed out
-              if (transform.zoom < 0.65 && !isMajor && year % 1000 !== 0) return null;
+              // Hide nearby base year if it collides with the illuminated hover year label
+              if (!isHoveredYear && (targetMov || hoveredDino)) {
+                const targetHoverStart = targetMov?.startYear ?? hoveredDino?.startYear;
+                if (targetHoverStart !== undefined) {
+                  const hoveredPosX = yearToX(targetHoverStart) * transform.zoom;
+                  if (Math.abs(posX - hoveredPosX) < 36) return null;
+                }
+              }
+
+              // Optimize readability when zoomed out (hovered year is always visible)
+              if (!isHoveredYear && transform.zoom < 0.65 && !isMajor && year % 500 !== 0) return null;
 
               return (
                 <div
                   key={year}
-                  className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
+                  className={`absolute top-0 -translate-x-1/2 flex flex-col items-center pointer-events-auto cursor-pointer transition-all duration-150 ${
+                    isHoveredYear ? 'z-40' : 'z-10'
+                  }`}
                   style={{ left: `${posX}px` }}
+                  onClick={() => panToYear(year)}
+                  title={`Ano ${formattedYear}${isYearZero ? ' • Marco Divisor Histórico (a.C. / d.C.)' : ''} • Clique para centrar neste ano`}
                 >
                   <div 
-                    className={`w-0.5 ${
-                      isYearZero 
-                        ? 'h-3 bg-red-500 w-1' 
-                        : isLimitYear
-                          ? 'h-3 bg-amber-500 w-1'
-                          : 'h-1.5 mb-0.5 ' + (isDark ? 'bg-neutral-700' : 'bg-neutral-300')
+                    className={`transition-all duration-150 ${
+                      isHoveredYear
+                        ? 'h-3 mb-0.5 bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,1)] w-1 rounded-full'
+                        : isYearZero 
+                          ? 'h-3 bg-red-500 w-1' 
+                          : isDinoYear
+                            ? 'h-3 bg-amber-500 w-1'
+                            : isLimitYear
+                              ? 'h-3 bg-amber-500 w-1'
+                              : 'h-1.5 mb-0.5 ' + (isDark ? 'bg-neutral-700' : 'bg-neutral-300') + ' w-0.5'
                     }`} 
                   />
-                  <span className={isYearZero ? 'text-red-500 font-extrabold text-[11px]' : isLimitYear ? 'text-amber-400 font-bold text-[10px]' : ''}>
+                  <span 
+                    className={`transition-all duration-150 whitespace-nowrap text-[11px] font-mono font-semibold ${
+                      isHoveredYear
+                        ? 'text-sky-400 font-bold text-[12px] drop-shadow-[0_0_8px_rgba(56,189,248,0.95)]'
+                        : isYearZero 
+                          ? 'text-red-500 font-black text-[12px] drop-shadow-[0_0_8px_rgba(239,68,68,0.9)]' 
+                          : isDinoYear 
+                            ? 'text-amber-400 font-bold text-[10px]' 
+                            : isLimitYear 
+                              ? 'text-amber-400 font-bold text-[10px]' 
+                              : (isDark ? 'text-neutral-300' : 'text-neutral-700')
+                    }`}
+                  >
                     {isYearZero ? '0' : formattedYear}
                   </span>
                 </div>
@@ -1215,14 +1423,15 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
       </div>
 
       {/* =========================================================== */}
-      {/* CONTINUOUS UNBROKEN HOVER CONNECTION LINE (VIEWPORT LEVEL)  */}
+      {/* UPPER CONNECTION LINE: RULER TO ACTIVE CARD (BEHIND CARDS)  */}
       {/* =========================================================== */}
-      {curveData && (
+      {curveData && curveData.upperPathD && (
         <svg 
-          className="absolute inset-0 w-full h-full pointer-events-none z-35 overflow-visible"
+          style={{ zIndex: 15 }}
+          className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
         >
           <defs>
-            <filter id="softGlowLine" x="-30%" y="-30%" width="160%" height="160%">
+            <filter id="upperGlowLine" x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="3.5" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
@@ -1230,95 +1439,124 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
               </feMerge>
             </filter>
 
-            <linearGradient id="softLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <linearGradient id="upperLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
-              <stop offset="35%" stopColor="#60a5fa" stopOpacity="0.85" />
-              <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.8" />
-              <stop offset="100%" stopColor="#818cf8" stopOpacity="0.65" />
+              <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.85" />
             </linearGradient>
           </defs>
 
-          {/* Ambient Glow Halo underneath the curve */}
           <path
-            d={curveData.pathD}
+            d={curveData.upperPathD}
             fill="none"
             stroke="#38bdf8"
             strokeWidth="6"
             strokeOpacity="0.18"
             strokeLinecap="round"
           />
-
-          {/* Main Continuous Crisp Line */}
           <path
-            d={curveData.pathD}
+            d={curveData.upperPathD}
             fill="none"
-            stroke="url(#softLineGradient)"
+            stroke="url(#upperLineGradient)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            filter="url(#softGlowLine)"
+            filter="url(#upperGlowLine)"
           />
 
-          {/* Subtle Connection Pin at sticky ruler base */}
+          {/* Connection Pin at sticky ruler base */}
           <circle
             cx={curveData.rulerScreenX}
-            cy={curveData.rulerExitY}
+            cy={curveData.rulerBottomY}
             r="3"
             fill="#38bdf8"
             stroke="#ffffff"
             strokeWidth="1.5"
           />
-
-          {/* Soft Glow Center Dot inside the hovered card */}
-          <circle
-            cx={curveData.cardCenterX}
-            cy={curveData.cardCenterY}
-            r="4.5"
-            fill="#38bdf8"
-            stroke="#ffffff"
-            strokeWidth="2"
-            className="animate-pulse"
-          />
         </svg>
       )}
 
       {/* =========================================================== */}
-      {/* THE TRANSFORMABLE 2D CANVAS WORLD                           */}
+      {/* THE TRANSFORMABLE 2D CANVAS WORLD (zIndex: 20)              */}
       {/* =========================================================== */}
       <div
         className="absolute top-0 left-0 origin-top-left will-change-transform"
         style={{
           transform: `translate3d(${transform.x}px, ${transform.y}px, 0px) scale(${transform.zoom})`,
-          width: '10000px',
+          width: '24000px',
           height: '4000px',
-          paddingTop: '75px'
+          paddingTop: '75px',
+          zIndex: 20
         }}
       >
-        {/* Subtle 4 Million Years BCE Marker across Canvas */}
-        <div
-          className="absolute top-0 bottom-0 pointer-events-none z-10"
-          style={{ left: `${yearToX(-4000000)}px` }}
-        >
-          {/* Subtle Vertical Amber Line */}
-          <div className="w-0.5 h-full bg-amber-500/40" />
-          <div className="sticky top-20 -translate-x-1/2 px-2 py-0.5 rounded text-[9px] font-mono text-amber-500/80 whitespace-nowrap">
-            4 Ma a.C.
-          </div>
-        </div>
+        {/* LOWER CONNECTION LINE: PASSES BEHIND MOVEMENTS (zIndex: 30) AND ABOVE COUNTRY TRACKS (zIndex: 10) */}
+        {curveData && curveData.localLowerPathD && (
+          <svg 
+            style={{ zIndex: 20 }}
+            className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+          >
+            <defs>
+              <filter id="lowerGlowLine" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="3.5" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
 
-        {/* Permanent Year 0 Red Vertical Line across Canvas */}
-        <div
-          className="absolute top-0 bottom-0 pointer-events-none z-10"
-          style={{ left: `${yearToX(0)}px` }}
-        >
-          <div className="w-0.5 h-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.5)] border-r border-red-500/40" />
-          <div className="sticky top-20 -translate-x-1/2 px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-red-600 text-white shadow-md border border-red-400 whitespace-nowrap">
-            Ano 0 (Marco Histórico)
-          </div>
-        </div>
-        
-        {/* CENTRAL TRACK: ART MOVEMENTS TIMELINE WITH VERTICAL LANE STACKING */}
-        <div className="relative mt-2 mb-3 py-2">
+              <linearGradient id="lowerLineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.95" />
+                <stop offset="35%" stopColor="#60a5fa" stopOpacity="0.85" />
+                <stop offset="70%" stopColor="#38bdf8" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#818cf8" stopOpacity="0.65" />
+              </linearGradient>
+            </defs>
+
+            <path
+              d={curveData.localLowerPathD}
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth="6"
+              strokeOpacity="0.22"
+              strokeLinecap="round"
+            />
+            <path
+              d={curveData.localLowerPathD}
+              fill="none"
+              stroke="url(#lowerLineGradient)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#lowerGlowLine)"
+            />
+
+            {/* Connection Pin at Bottom Center of active card */}
+            <circle
+              cx={curveData.cardLocalCenterX}
+              cy={curveData.cardBottom}
+              r="3.5"
+              fill="#38bdf8"
+              stroke="#ffffff"
+              strokeWidth="1.5"
+            />
+
+            {/* Connection Pins on Country Rows in local coordinates */}
+            {curveData.countryNodes.map(node => (
+              <circle
+                key={node.regionId}
+                cx={node.localX}
+                cy={node.localY}
+                r="4.5"
+                fill="#38bdf8"
+                stroke="#ffffff"
+                strokeWidth="1.8"
+                filter="url(#lowerGlowLine)"
+              />
+            ))}
+          </svg>
+        )}
+
+        {/* CENTRAL TRACK: MOVEMENTS / DINOSAURS TIMELINE (zIndex: 30: IN FRONT OF BLUE LINE zIndex: 20) */}
+        <div className="relative mt-2 mb-3 py-2" style={{ zIndex: 30 }}>
           {/* Main Central Monochromatic Guide Line */}
           <div 
             className={`absolute top-1/2 left-0 right-0 h-0.5 -translate-y-1/2 ${
@@ -1326,16 +1564,111 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
             }`} 
           />
 
-          {/* Render Movement Cards Stacked Vertically in Lanes for Overlapping Periods */}
+          {/* Render Movement & Dinosaur Cards Stacked Vertically in Lanes for Overlapping Periods */}
           <div 
             className="relative"
             style={{ height: `${movementTrackHeight}px` }}
           >
-            {movementLanes.positionedMovements.map((m) => {
+            {/* DINOSAUR CARDS (RENDERED ONLY IN DINOSAUR MODE) */}
+            {timelineMode === 'dinosaur' && dinosaurLanes.positionedDinosaurs.map((d) => {
+              const topOffset = d.lane * (cardHeight + laneGap) + 12;
+              const isHovered = hoveredDino?.id === d.id;
+
+              return (
+                <div
+                  key={d.id}
+                  onClick={() => setSelectedDino(d)}
+                  onMouseEnter={() => {
+                    if (!isDraggingRef.current) {
+                      setHoveredDino(d);
+                    }
+                  }}
+                  onMouseLeave={() => setHoveredDino(null)}
+                  className={`interactive-card absolute z-10 rounded-2xl overflow-hidden border cursor-pointer group select-none transition-all duration-200 ${
+                    isHovered
+                      ? (isDark 
+                          ? 'ring-2 ring-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] border-amber-400 z-30 scale-[1.02]' 
+                          : 'ring-2 ring-amber-500 shadow-[0_0_24px_rgba(245,158,11,0.4),0_8px_24px_rgba(0,0,0,0.45)] border-amber-500 z-30 scale-[1.02]')
+                      : (isDark 
+                          ? 'shadow-[0_4px_20px_-4px_rgba(0,0,0,0.85)]' 
+                          : 'shadow-[0_4px_16px_rgba(0,0,0,0.25),0_2px_6px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]')
+                  } ${
+                    isDark 
+                      ? 'border-neutral-700/80 hover:border-amber-400/80 bg-[#202024]' 
+                      : 'border-[#ded8cc] hover:border-amber-500/80 bg-white'
+                  }`}
+                  style={{
+                    left: `${d.startX}px`,
+                    top: `${topOffset}px`,
+                    width: `${d.cardWidth}px`,
+                    height: `${cardHeight}px`
+                  }}
+                  title={`${d.name} (${d.displayPeriod}) • Período: ${d.eraName} • Dieta: ${d.diet} • Clique para ver detalhes e espécime`}
+                >
+                  {/* Dinosaur Specimen Illustration */}
+                  <img
+                    src={d.imageUrl}
+                    alt={d.name}
+                    className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none transition-transform duration-300 group-hover:scale-105"
+                    loading="eager"
+                    draggable={false}
+                  />
+
+                  {/* Monochromatic Vignette Gradient - Real black shadow overlay inside card */}
+                  <div 
+                    className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/95 via-black/65 via-50% to-black/15" 
+                  />
+
+                  {/* Top Accent Stripe */}
+                  <div 
+                    className={`absolute top-0 left-0 right-0 h-0.5 z-10 transition-colors ${
+                      isHovered
+                        ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
+                        : (isDark ? 'bg-amber-900/60' : 'bg-amber-300/80')
+                    }`}
+                  />
+
+                  {/* Card Content Header & Footer */}
+                  <div className="absolute inset-0 p-3 flex flex-col justify-between z-10 pointer-events-none">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border backdrop-blur-md ${
+                        isDark ? 'bg-amber-950/80 text-amber-300 border-amber-800/80' : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}>
+                        {d.eraName}
+                      </span>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold border backdrop-blur-md ${
+                        d.diet === 'Carnívoro'
+                          ? (isDark ? 'bg-red-950/80 text-red-300 border-red-800/80' : 'bg-red-50 text-red-700 border-red-200')
+                          : (isDark ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800/80' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+                      }`}>
+                        {d.diet}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className={`text-[28px] sm:text-[32px] font-black tracking-tight leading-tight line-clamp-1 drop-shadow-md ${
+                        isHovered 
+                          ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]' 
+                          : 'text-white'
+                      }`}>
+                        {d.name}
+                      </h3>
+                      <p className="text-[18px] sm:text-[21px] font-bold tracking-tight mt-0.5 line-clamp-1 drop-shadow-sm text-amber-200/95">
+                        {d.displayPeriod}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* ART MOVEMENTS CARDS (RENDERED ONLY IN ART MODE) */}
+            {timelineMode === 'art' && movementLanes.positionedMovements.map((m) => {
               const topOffset = m.lane * (cardHeight + laneGap) + 12;
               const famousArtwork = m.famousWorks[0];
               const match = isHighlighted(m);
-              const isHovered = hoveredMovement?.id === m.id;
+              const isSelected = selectedMovement?.id === m.id;
+              const isHoveredOrActive = hoveredMovement?.id === m.id || (isSelected && !hoveredMovement);
 
               return (
                 <div
@@ -1349,12 +1682,16 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
                   onMouseLeave={() => {
                     setHoveredMovement(null);
                   }}
-                  className={`interactive-card absolute rounded-2xl overflow-hidden border shadow-sm cursor-pointer group select-none transition-all duration-200 ${
+                  className={`interactive-card absolute z-10 rounded-2xl overflow-hidden border cursor-pointer group select-none transition-all duration-200 ${
                     match ? 'opacity-100' : 'opacity-25'
                   } ${
-                    isHovered
-                      ? 'ring-1 ring-sky-400/80 shadow-[0_0_30px_rgba(56,189,248,0.32),0_0_15px_rgba(56,189,248,0.2)] border-sky-400/70 z-20'
-                      : ''
+                    isHoveredOrActive
+                      ? (isDark 
+                          ? 'ring-2 ring-sky-400 shadow-[0_0_30px_rgba(56,189,248,0.38),0_0_15px_rgba(56,189,248,0.25)] border-sky-400 z-30 scale-[1.01]' 
+                          : 'ring-2 ring-sky-500 shadow-[0_0_24px_rgba(56,189,248,0.4),0_8px_24px_rgba(0,0,0,0.45)] border-sky-500 z-30 scale-[1.01]')
+                      : (isDark 
+                          ? 'shadow-[0_4px_20px_-4px_rgba(0,0,0,0.85)]' 
+                          : 'shadow-[0_4px_16px_rgba(0,0,0,0.25),0_2px_6px_rgba(0,0,0,0.15)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.38)]')
                   } ${
                     isDark 
                       ? 'border-neutral-700/80 hover:border-neutral-400 bg-[#202024]' 
@@ -1364,8 +1701,10 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
                     left: `${m.startX}px`,
                     top: `${topOffset}px`,
                     width: `${m.cardWidth}px`,
-                    height: `${cardHeight}px`
+                    height: `${cardHeight}px`,
+                    zIndex: isHoveredOrActive ? 40 : 30
                   }}
+                  title={`${m.name} (${formatCleanPeriod(m.displayPeriod)}) • Região: ${m.originRegion}${m.keyArtists[0] ? ` • Artista: ${m.keyArtists[0].name}` : ''} • Clique para ver detalhes e obras`}
                 >
                   {/* Masterpiece Artwork Background Image */}
                   {famousArtwork?.imageUrl ? (
@@ -1385,44 +1724,41 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
                     />
                   )}
 
-                  {/* Monochromatic Vignette Overlay for High Legibility */}
+                  {/* Monochromatic Vignette Overlay - Real black shadow overlay inside card */}
                   <div 
-                    className={`absolute inset-0 pointer-events-none ${
-                      isDark 
-                        ? 'bg-gradient-to-t from-[#18181b] via-[#18181b]/80 via-45% to-[#18181b]/20' 
-                        : 'bg-gradient-to-t from-[#faf8f5] via-[#faf8f5]/85 via-50% to-[#faf8f5]/25'
-                    }`} 
+                    className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/95 via-black/75 via-60% to-black/20" 
                   />
 
-                  {/* Accent Stripe / Indicator on Hover */}
+                  {/* Accent Stripe / Indicator on Hover/Active */}
                   <div 
                     className={`absolute top-0 left-0 right-0 h-0.5 z-10 transition-colors ${
-                      isHovered
+                      isHoveredOrActive
                         ? 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]'
                         : (isDark ? 'bg-neutral-500' : 'bg-neutral-400')
                     }`}
                   />
 
-                  {/* Subtle Center Origin Dot on Card */}
-                  {isHovered && (
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-sky-400 shadow-[0_0_10px_rgba(56,189,248,0.9)] ring-2 ring-white/70 pointer-events-none z-30" />
+                  {/* Top & Bottom connection notches on hover / active */}
+                  {isHoveredOrActive && (
+                    <>
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-1 bg-sky-400 rounded-b shadow-[0_0_8px_rgba(56,189,248,0.9)] z-20" />
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-1 bg-sky-400 rounded-t shadow-[0_0_8px_rgba(56,189,248,0.9)] z-20" />
+                    </>
                   )}
 
-                  {/* Content: Title on top, Years below without background and without "c." */}
-                  <div className="absolute inset-0 p-3.5 flex flex-col justify-end z-10 text-left pointer-events-none">
+                  {/* Content: Title on top (2x size), Years below (1.5x size) */}
+                  <div className="absolute inset-0 p-3.5 sm:p-4 flex flex-col justify-end z-10 text-left pointer-events-none">
                     <h3 
-                      className={`text-sm sm:text-base font-bold tracking-tight leading-tight line-clamp-1 drop-shadow-sm ${
-                        isHovered 
-                          ? 'text-sky-300 drop-shadow-[0_0_6px_rgba(56,189,248,0.4)]' 
-                          : (isDark ? 'text-white' : 'text-neutral-900')
+                      className={`text-[28px] sm:text-[32px] font-black tracking-tight leading-tight line-clamp-1 drop-shadow-md ${
+                        isHoveredOrActive 
+                          ? 'text-sky-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]' 
+                          : 'text-white'
                       }`}
                     >
                       {m.name}
                     </h3>
                     <p 
-                      className={`text-xs sm:text-sm font-semibold tracking-tight mt-0.5 line-clamp-1 drop-shadow-xs ${
-                        isDark ? 'text-neutral-200' : 'text-neutral-800'
-                      }`}
+                      className="text-[18px] sm:text-[21px] font-bold tracking-tight mt-0.5 line-clamp-1 drop-shadow-sm text-neutral-200"
                     >
                       {formatCleanPeriod(m.displayPeriod)}
                     </p>
@@ -1433,16 +1769,17 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
           </div>
         </div>
 
-        {/* VERTICAL Y-AXIS REGIONAL CONTEXT TRACKS */}
-        <div className="mt-2 space-y-3 px-4">
-          <div 
-            className={`flex items-center gap-2 mb-1.5 text-xs font-bold uppercase tracking-wider ${
-              isDark ? 'text-neutral-400' : 'text-neutral-600'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Camadas Contextuais por País (Eixo Vertical Y)</span>
-          </div>
+        {/* VERTICAL Y-AXIS REGIONAL CONTEXT TRACKS (ONLY IN ART MODE: zIndex: 10 BEHIND BLUE LINE zIndex: 20) */}
+        {timelineMode === 'art' && (
+          <div className="mt-2 space-y-3 pl-8 sm:pl-14 pr-4 relative" style={{ zIndex: 10 }}>
+            <div 
+              className={`flex items-center gap-2 mb-1.5 text-xs font-bold uppercase tracking-wider ${
+                isDark ? 'text-neutral-400' : 'text-neutral-600'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Camadas Contextuais por País (Eixo Vertical Y)</span>
+            </div>
 
           {visibleRegions.map((region) => {
             const isExpanded = !!expandedRegions[region.id];
@@ -1465,7 +1802,7 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
                   }`}
                 >
                   <div className="flex items-center space-x-2.5">
-                    <span className="text-xl">{region.flagEmoji}</span>
+                    <CountryFlag regionId={region.id} size="md" />
                     <h4 
                       className={`text-sm font-bold flex items-center gap-2 ${
                         isDark ? 'text-white' : 'text-neutral-900'
@@ -1521,12 +1858,13 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
 
                         {/* Synchronized Year & Context Tooltip */}
                         <div 
-                          className={`ml-2 px-2.5 py-1 rounded-md text-[11px] font-mono whitespace-nowrap shadow-lg border backdrop-blur-md max-w-sm truncate ${
+                          className={`ml-2 px-2.5 py-1 rounded-md text-[11px] font-mono whitespace-nowrap shadow-lg border backdrop-blur-md max-w-sm truncate flex items-center gap-2 ${
                             isDark 
                               ? 'bg-[#18181b]/92 border-sky-500/40 text-sky-100 shadow-black/60' 
                               : 'bg-white/95 border-sky-400 text-sky-950 shadow-neutral-300/80'
                           }`}
                         >
+                          <CountryFlag regionId={region.id} size="sm" />
                           <span className="font-bold text-sky-400">{region.name} ({node.yearFormatted}):</span>{' '}
                           <span>{node.status}</span>
                         </div>
@@ -1547,30 +1885,33 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
                             onSelectContext(region, entry);
                           }
                         }}
-                        className={`interactive-card absolute top-2 rounded-xl border p-2.5 shadow-xs transition-all cursor-pointer group ${
+                        className={`interactive-card absolute top-2 rounded-xl border p-2.5 transition-all cursor-pointer group ${
                           isDark 
-                            ? 'border-neutral-700/80 bg-[#18181b]/95 hover:border-neutral-400 text-neutral-200' 
-                            : 'border-[#ded8cc] bg-white hover:border-neutral-600 text-neutral-800'
+                            ? 'border-neutral-700/80 bg-[#18181b]/95 hover:border-neutral-400 text-neutral-200 shadow-xs' 
+                            : 'border-[#ded8cc] bg-white hover:border-neutral-600 text-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.28)]'
                         }`}
                         style={{
                           left: `${startX}px`,
                           width: `${entryWidth}px`
                         }}
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span 
-                            className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
-                              isDark ? 'text-neutral-300' : 'text-neutral-700'
-                            }`}
-                          >
-                            {entry.startYear < 0 ? `${Math.abs(entry.startYear)} a.C.` : entry.startYear} – {entry.endYear} d.C.
-                          </span>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <CountryFlag regionId={region.id} size="md" />
+                            <span 
+                              className={`text-xs font-bold uppercase tracking-wider font-mono ${
+                                isDark ? 'text-neutral-200' : 'text-neutral-800'
+                              }`}
+                            >
+                              {entry.startYear < 0 ? `${Math.abs(entry.startYear)} a.C.` : entry.startYear} – {entry.endYear} d.C.
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="space-y-1 text-xs">
+                        <div className="space-y-1 text-sm leading-relaxed">
                           {entry.facets.arte && activeCategories.includes('arte') && (
-                            <div className={`line-clamp-2 text-[11px] ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
-                              <span className="font-semibold">Arte: </span>
+                            <div className={`line-clamp-2 text-sm leading-relaxed ${isDark ? 'text-neutral-300' : 'text-neutral-700'}`}>
+                              <span className="font-semibold text-xs font-mono uppercase tracking-wider">Arte: </span>
                               {entry.facets.arte}
                             </div>
                           )}
@@ -1583,18 +1924,147 @@ export const TimelineCanvas: React.FC<TimelineCanvasProps> = ({
             );
           })}
         </div>
+      )}
 
       </div>
 
-      {/* Persistent Spatial Minimap */}
-      <Minimap
-        movements={movements}
-        transform={transform}
-        canvasWidth={containerRef.current?.clientWidth || 1000}
-        canvasHeight={containerRef.current?.clientHeight || 800}
-        onPanToYear={panToYear}
+      {/* Floating Canvas Controls Cluster (Dynamically slides to the left of the Period Details drawer when open) */}
+      <div 
+        style={{
+          right: isDrawerOpen ? `${(sidebarWidth || 384) + 14}px` : '16px',
+        }}
+        className="absolute bottom-3 sm:bottom-6 z-40 flex flex-col items-end gap-1.5 sm:gap-2.5 select-none pointer-events-auto transition-[right] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      >
+        {/* Unified Zoom Controls Capsule (Expands upwards in-place smoothly with zero gap) - Compact on Mobile */}
+        <div 
+          className="relative w-8 h-8 sm:w-10 sm:h-10 select-none"
+          onMouseEnter={handleZoomMouseEnter}
+          onMouseLeave={handleZoomMouseLeave}
+          title="Controles de Zoom da Linha do Tempo"
+        >
+          <div 
+            className={`absolute bottom-0 right-0 w-8 sm:w-10 rounded-lg sm:rounded-xl border backdrop-blur-md transition-all duration-300 ease-out overflow-hidden flex flex-col items-center p-0.5 sm:p-1 ${
+              isZoomControlsHovered 
+                ? 'h-[118px] sm:h-[148px] shadow-2xl pointer-events-auto' 
+                : 'h-8 sm:h-10 shadow-lg pointer-events-auto'
+            } ${
+              isDark 
+                ? 'bg-[#18181b]/95 border-neutral-800 text-neutral-200 shadow-black/80' 
+                : 'bg-[#faf8f5]/95 border-[#ded8cc] text-neutral-800 shadow-[0_8px_24px_rgba(0,0,0,0.3)]'
+            }`}
+          >
+            {/* 1. Zoom In Button */}
+            <button
+              onClick={handleZoomIn}
+              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                isDark ? 'hover:bg-neutral-800 text-neutral-200 hover:text-white' : 'hover:bg-neutral-200 text-neutral-800 hover:text-black'
+              }`}
+              title="Aproximar zoom (+)"
+            >
+              <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+
+            {/* 2. Zoom Out Button */}
+            <button
+              onClick={handleZoomOut}
+              className={`w-7 h-7 sm:w-8 sm:h-8 mt-0.5 sm:mt-1 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                isDark ? 'hover:bg-neutral-800 text-neutral-200 hover:text-white' : 'hover:bg-neutral-200 text-neutral-800 hover:text-black'
+              }`}
+              title="Afastar zoom (-)"
+            >
+              <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
+
+            {/* 3. Reset Position Button */}
+            <button
+              onClick={handleResetZoom}
+              className={`w-7 h-7 sm:w-8 sm:h-8 mt-0.5 sm:mt-1 rounded-md sm:rounded-lg flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                isDark ? 'hover:bg-neutral-800 text-neutral-200 hover:text-white' : 'hover:bg-neutral-200 text-neutral-800 hover:text-black'
+              }`}
+              title="Resetar zoom para o padrão"
+            >
+              <RotateCcw className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            </button>
+
+            {/* 4. Zoom percentage indicator */}
+            <div 
+              className={`text-[8px] sm:text-[9px] text-center font-mono font-bold border-t w-full mt-1 sm:mt-1.5 pt-0.5 sm:pt-1 pb-0.5 shrink-0 select-none ${
+                isDark ? 'border-neutral-800 text-neutral-400' : 'border-[#ded8cc] text-neutral-600'
+              }`}
+              title={`Nível de zoom atual: ${Math.round((transform.zoom / BASE_ZOOM) * 100)}%`}
+            >
+              {Math.round((transform.zoom / BASE_ZOOM) * 100)}%
+            </div>
+          </div>
+        </div>
+
+        {/* Minimap (Bottom): Either compact Map icon button or full Minimap panel */}
+        <Minimap
+          isOpen={isMinimapOpen}
+          onToggleOpen={() => setIsMinimapOpen(prev => !prev)}
+          movements={movements}
+          timelineMode={timelineMode}
+          transform={transform}
+          canvasWidth={containerRef.current?.clientWidth || 1000}
+          canvasHeight={containerRef.current?.clientHeight || 800}
+          onPanToYear={panToYear}
+          onSetTransformX={handleSetTransformX}
+          theme={theme}
+        />
+      </div>
+
+      {/* Mode Indicator & Return Button when in Dinosaur Mode */}
+      {timelineMode === 'dinosaur' && (
+        <div className="absolute top-16 left-4 z-40 flex items-center gap-2 pointer-events-auto">
+          <div className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 shadow-lg backdrop-blur-md ${
+            isDark 
+              ? 'bg-[#18181b]/95 border-amber-500/50 text-amber-400' 
+              : 'bg-white/95 border-amber-300 text-amber-800'
+          }`}>
+            <span className="text-sm">🦕</span>
+            <span>Modo Dinossauros (Mesozoico)</span>
+          </div>
+          <button
+            onClick={() => {
+              setTimelineMode('art');
+              localStorage.setItem('cronos_timeline_mode', 'art');
+              setTransform({ x: 40 - 200 * 0.85, y: -20, zoom: 0.85 });
+              setModeToast({ show: true, text: 'Modo História da Arte restaurado!', icon: '🎨' });
+              setTimeout(() => setModeToast(null), 4000);
+            }}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 shadow-md backdrop-blur-md transition-all cursor-pointer ${
+              isDark 
+                ? 'bg-neutral-900/90 border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white hover:border-neutral-500' 
+                : 'bg-white/90 border-neutral-300 text-neutral-700 hover:bg-neutral-100 hover:text-black hover:border-neutral-400'
+            }`}
+            title="Voltar para a História da Arte (ou force para a direita no final da régua)"
+          >
+            <span>🎨</span>
+            <span>Voltar à História da Arte ➔</span>
+          </button>
+        </div>
+      )}
+
+      {/* Dinosaur Detail Drawer */}
+      <DinosaurDetailDrawer
+        dinosaur={selectedDino}
+        onClose={() => setSelectedDino(null)}
         theme={theme}
       />
+
+      {/* Mode Transition Toast Notification */}
+      {modeToast?.show && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className={`px-4 py-2.5 rounded-2xl border shadow-2xl backdrop-blur-md flex items-center gap-2.5 text-xs font-semibold ${
+            modeToast.icon === '🦖'
+              ? (isDark ? 'bg-amber-950/95 border-amber-500/80 text-amber-200' : 'bg-amber-50/95 border-amber-400 text-amber-900')
+              : (isDark ? 'bg-neutral-900/95 border-neutral-700 text-neutral-100' : 'bg-white/95 border-neutral-300 text-neutral-900')
+          }`}>
+            <span className="text-base">{modeToast.icon}</span>
+            <span>{modeToast.text}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
