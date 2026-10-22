@@ -20,12 +20,13 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
-        id: 'bisao-lascaux',
-        title: 'O Bisão Vermelho Rupestre',
+        id: 'bisao-altamira',
+        title: 'Bisão Policromado de Altamira',
         artist: 'Pintores das Cavernas',
-        year: 'c. 36.000 a.C.',
+        year: 'c. 15.000–13.000 a.C.',
         imageUrl: '/src/assets/images/lascaux_red_bison_1790228212922.jpg',
-        description: 'Pintura rupestre em ocre vermelho sobre rocha natural retratando a força e vitalidade do bisão ancestral.'
+        description: 'Pintura rupestre em ocre vermelho sobre rocha natural retratando a força e vitalidade do bisão ancestral, no teto da caverna de Altamira (Espanha).',
+        fonte: 'Museo de Altamira, Santillana del Mar (Espanha)'
       }
     ],
     influences: [],
@@ -194,12 +195,13 @@ export const MOVEMENTS: Movement[] = [
     ],
     famousWorks: [
       {
-        id: 'zigurate-cidade-mesopotamia',
-        title: 'O Grande Zigurate e Cidade da Babilônia',
-        artist: 'Arquitetos Reais da Mesopotâmia',
+        id: 'zigurate-ur',
+        title: 'O Grande Zigurate de Ur',
+        artist: 'Rei Ur-Nammu e Arquitetos Sumérios',
         year: 'c. 2100 a.C.',
         imageUrl: '/src/assets/images/mesopotamia_ziggurat_city_1790228271799.jpg',
-        description: 'Monumental templo escalonado em tijolos cozidos elevando o santuário sagrado em direção aos céus mesopotâmicos.'
+        description: 'Monumental templo escalonado em tijolos cozidos erguido na cidade suméria de Ur por Ur-Nammu, elevando o santuário sagrado em direção aos céus mesopotâmicos.',
+        fonte: 'Sítio arqueológico de Ur (Tell el-Muqayyar), Iraque'
       },
       {
         id: 'estela-hamurabi',
@@ -239,10 +241,11 @@ export const MOVEMENTS: Movement[] = [
       {
         id: 'piramides-gize',
         title: 'As Grandes Pirâmides de Gizé e a Esfinge',
-        artist: 'Imhotep & Mestres Construtores dos Faraós',
+        artist: 'Hemiunu & Mestres Construtores dos Faraós',
         year: 'c. 2560 a.C.',
         imageUrl: '/src/assets/images/egypt_giza_pyramids_1790228283102.jpg',
-        description: 'Monumentos eternos de calcário e granito erguidos nas areias do deserto como morada sagrada para a eternidade dos faraós.'
+        description: 'Monumentos eternos de calcário e granito erguidos nas areias do deserto como morada sagrada para a eternidade dos faraós. A Grande Pirâmide (Quéops) é atribuída ao vizir-arquiteto Hemiunu.',
+        fonte: 'Planalto de Gizé, Egito'
       },
       {
         id: 'mascara-tutancamon',
@@ -283,10 +286,11 @@ export const MOVEMENTS: Movement[] = [
       {
         id: 'escultura-marmore-grega',
         title: 'Escultura Clássica em Mármore Branco',
-        artist: 'Praxíteles e Mestres Escultores',
+        artist: 'Policleto e Mestres Escultores',
         year: 'c. 450 a.C.',
         imageUrl: '/src/assets/images/greek_marble_statue_1790228295511.jpg',
-        description: 'Escultura esculpida em mármore branco impecável, ápice do cânone clássico, proporção e elegância do contrapposto.'
+        description: 'Escultura em mármore branco impecável, ápice do cânone clássico do período Clássico Alto (Policleto, Míron), com proporção matemática e elegância do contrapposto.',
+        fonte: 'Cânone do Período Clássico grego (séc. V a.C.)'
       },
       {
         id: 'parthenon-grecia',
@@ -455,11 +459,12 @@ export const MOVEMENTS: Movement[] = [
     famousWorks: [
       {
         id: 'catedral-gotica-koln',
-        title: 'Catedral Gótica Monumental de Pedra Escura',
+        title: 'Catedral de Colônia (Kölner Dom)',
         artist: 'Mestres Pedreiros Góticos',
-        year: '1248–1473',
+        year: '1248–1473; concluída em 1880',
         imageUrl: '/src/assets/images/gothic_black_cathedral_1790228306617.jpg',
-        description: 'Imensa catedral gótica de pedra escura com agulhas altíssimas alcançando os céus, arcobotantes esbeltos e rosácea central.'
+        description: 'Imensa catedral gótica de pedra escura com agulhas altíssimas alcançando os céus, arcobotantes esbeltos e rosácea central. Iniciada em 1248, as obras pararam em 1473 e só foram concluídas em 1880.',
+        fonte: 'Kölner Dom, Colônia (Alemanha) — Patrimônio Mundial da UNESCO'
       },
       {
         id: 'notre-dame-paris',
@@ -1361,19 +1366,21 @@ export const MOVEMENTS: Movement[] = [
     famousWorks: [
       {
         id: 'pollock-convergence',
-        title: 'Number 1A / Convergence',
+        title: 'Convergence',
         artist: 'Jackson Pollock',
-        year: '1948',
+        year: '1952',
         imageUrl: 'https://images.unsplash.com/photo-1579541814924-49fef17c5be5?q=80&w=800&auto=format&fit=crop',
-        description: 'Trama rítmica estonteante de esmaltes industriais aplicados no chão com dança gestual por todo o espaço da tela.'
+        description: 'Trama rítmica estonteante de esmaltes industriais aplicados no chão com dança gestual por todo o espaço da tela.',
+        fonte: 'Albright-Knox Art Gallery, Buffalo (EUA)'
       },
       {
         id: 'rothko-no-14',
-        title: 'No. 14 (Horizontes Luminosos)',
+        title: 'No. 14, 1960',
         artist: 'Mark Rothko',
         year: '1960',
         imageUrl: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=800&auto=format&fit=crop',
-        description: 'Camadas flutuantes de pigmentos aveludados evocando comoção espiritual e contemplação íntima profunda.'
+        description: 'Camadas flutuantes de pigmentos aveludados evocando comoção espiritual e contemplação íntima profunda.',
+        fonte: 'San Francisco Museum of Modern Art (SFMOMA), EUA'
       }
     ],
     influences: ['surrealismo', 'abstracionismo', 'expressionismo'],
@@ -1405,11 +1412,12 @@ export const MOVEMENTS: Movement[] = [
     famousWorks: [
       {
         id: 'popart-mulher-loira',
-        title: 'Garota Pop Art com Cabelo Amarelo',
-        artist: 'Roy Lichtenstein & Estilo Pop',
-        year: '1964',
+        title: 'Drowning Girl',
+        artist: 'Roy Lichtenstein',
+        year: '1963',
         imageUrl: '/src/assets/images/pop_art_woman_1790228330060.jpg',
-        description: 'Pintura icônica do Pop Art retratando mulher com vibrante cabelo amarelo intenso, pontos Ben-Day e contornos marcantes.'
+        description: 'Pintura icônica do Pop Art inspirada em quadrinhos, com pontos Ben-Day, contornos marcantes e balão de pensamento melodramático.',
+        fonte: 'Museum of Modern Art (MoMA), Nova York (EUA)'
       },
       {
         id: 'campbells-soup-warhol',

@@ -15,14 +15,14 @@ Plano por fases, cada tarefa com arquivo, ação e critério de pronto. Marque `
 
 | # | Linha | Problema | Correção |
 |---|---|---|---|
-| [ ] 1 | 242 | Pirâmides de Gizé atribuídas a "Imhotep & Mestres Construtores". Imhotep projetou a pirâmide de degraus de Djoser (Saqqara, c. 2670 a.C.). | Trocar o artista para **Hemiunu** (como já está em `periodArtworksByMedium.ts:313`). Manter Imhotep em `keyArtists` (l. 235), que está correto. |
-| [ ] 2 | 280, 286 | "Praxíteles" numa obra de c. 450 a.C. Praxíteles atuou c. 370–330 a.C. | Trocar o artista para **Míron/Policleto** *ou* a data para c. 350 a.C. |
-| [ ] 3 | 198 | "O Grande Zigurate e Cidade da Babilônia", c. 2100 a.C. Em 2100 a.C. é o Zigurate de **Ur** (Ur-Nammu); o Etemenanki da Babilônia é dos séc. VII–VI a.C. | Renomear para *Zigurate de Ur* (mantendo a data) *ou* datar como séc. VI a.C. |
-| [ ] 4 | 24 | "O Bisão Vermelho Rupestre", c. 36.000 a.C. Os bisões de Altamira são de c. 15.000–13.000 a.C.; Chauvet (c. 36.000 a.C.) não é "o bisão vermelho". | Usar *Bisões de Altamira*, c. 15.000 a.C. |
-| [ ] 5 | 460 | Catedral de Colônia "1248–1473". As obras pararam em 1473; a conclusão é de **1880**. | `year: '1248–1880'`, com nota sobre a pausa na descrição. |
-| [ ] 6 | 1364 | "Number 1A / Convergence" (Pollock) junta duas obras: *Number 1A, 1948* e *Convergence* (1952). | Escolher uma: *Number 1A, 1948*. |
-| [ ] 7 | 1408 | "Garota Pop Art com Cabelo Amarelo" (Lichtenstein): título inventado. | Usar obra real: *Drowning Girl* (1963) ou *Girl with Hair Ribbon* (1965). |
-| [ ] 8 | 1372 | "No. 14 (Horizontes Luminosos)" (Rothko): o subtítulo não existe. | `title: 'No. 14, 1960'`. |
+| [x] 1 | 242 | Pirâmides de Gizé atribuídas a "Imhotep & Mestres Construtores". Imhotep projetou a pirâmide de degraus de Djoser (Saqqara, c. 2670 a.C.). | Trocar o artista para **Hemiunu** (como já está em `periodArtworksByMedium.ts:313`). Manter Imhotep em `keyArtists` (l. 235), que está correto. *(feito em `5e0702c`: autor → "Hemiunu & Mestres Construtores dos Faraós"; Imhotep mantido em `keyArtists` com o papel correto)* |
+| [x] 2 | 280, 286 | "Praxíteles" numa obra de c. 450 a.C. Praxíteles atuou c. 370–330 a.C. | Trocar o artista para **Míron/Policleto** *ou* a data para c. 350 a.C. *(feito em `5e0702c`: artista → Policleto, mantida a data c. 450 a.C.)* |
+| [x] 3 | 198 | "O Grande Zigurate e Cidade da Babilônia", c. 2100 a.C. Em 2100 a.C. é o Zigurate de **Ur** (Ur-Nammu); o Etemenanki da Babilônia é dos séc. VII–VI a.C. | Renomear para *Zigurate de Ur* (mantendo a data) *ou* datar como séc. VI a.C. *(feito em `5e0702c`: obra → "O Grande Zigurate de Ur", autor Ur-Nammu; id → `zigurate-ur`)* |
+| [x] 4 | 24 | "O Bisão Vermelho Rupestre", c. 36.000 a.C. Os bisões de Altamira são de c. 15.000–13.000 a.C.; Chauvet (c. 36.000 a.C.) não é "o bisão vermelho". | Usar *Bisões de Altamira*, c. 15.000 a.C. *(feito em `5e0702c`: título → "Bisão Policromado de Altamira", data c. 15.000–13.000 a.C.; id → `bisao-altamira`)* |
+| [x] 5 | 460 | Catedral de Colônia "1248–1473". As obras pararam em 1473; a conclusão é de **1880**. | `year: '1248–1880'`, com nota sobre a pausa na descrição. *(feito em `5e0702c`: ano → "1248–1473; concluída em 1880", título → "Catedral de Colônia (Kölner Dom)")* |
+| [x] 6 | 1364 | "Number 1A / Convergence" (Pollock) junta duas obras: *Number 1A, 1948* e *Convergence* (1952). | Escolher uma: *Number 1A, 1948*. *(feito em `5e0702c`: obra única → "Convergence", 1952)* |
+| [x] 7 | 1408 | "Garota Pop Art com Cabelo Amarelo" (Lichtenstein): título inventado. | Usar obra real: *Drowning Girl* (1963) ou *Girl with Hair Ribbon* (1965). *(feito em `5e0702c`: → "Drowning Girl", Roy Lichtenstein, 1963)* |
+| [x] 8 | 1372 | "No. 14 (Horizontes Luminosos)" (Rothko): o subtítulo não existe. | `title: 'No. 14, 1960'`. *(feito em `5e0702c`: título → "No. 14, 1960")* |
 
 > Os números de linha valem para o commit `eb643e1`. Se mudarem, busque pelo título.
 
@@ -36,8 +36,8 @@ Plano por fases, cada tarefa com arquivo, ação e critério de pronto. Marque `
 
 ### 1.3 Rastreabilidade
 
-- [ ] Adicionar `source?: string` (museu/catálogo/URL) ao tipo `Artwork` em `src/types.ts`.
-- [ ] Preencher `source` nas obras corrigidas na 1.1. Pronto quando: 100% das obras de `movements.ts` com fonte.
+- [x] Adicionar `source?: string` (museu/catálogo/URL) ao tipo `Artwork` em `src/types.ts`. *(feito em `5e0702c`: campo `fonte?` adicionado ao tipo `Artwork`)*
+- [~] Preencher `source` nas obras corrigidas na 1.1. Pronto quando: 100% das obras de `movements.ts` com fonte. *(parcial em `5e0702c`: `fonte` preenchida nas 8 obras corrigidas; falta preencher nas demais)*
 - [ ] Exibir a fonte no painel (`MovementModal.tsx`), abaixo de cada obra.
 
 ---
