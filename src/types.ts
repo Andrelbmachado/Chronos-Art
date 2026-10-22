@@ -42,6 +42,7 @@ export interface Artwork {
   description: string;
   externalUrl?: string;
   medium?: ArtMedium | string;
+  fonte?: string; // Museu/catálogo de referência da obra
 }
 
 export interface Movement {
